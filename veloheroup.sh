@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+
+#
+# Command line interface for uploading to Velo Hero <http://www.velohero.com/>
+#
+# See instructions at https://github.com/cyclenerd/veloheroup
+#
+
+set -e
+
+# script name
+PROG=$(basename "$0")
+# User-Agent string
+MY_USERAGENT="veloheroup/1.0"
+
+
+#####################################################################
+# Usage
+#####################################################################
+
+function echo_sso_key_help {
+	echo
+	echo "To use the '$PROG' script, please go to https://app.velohero.com/sso"
+	echo "and get yourself a private single sign-on key. That's the long string."
+	echo
+	echo "Then create a file '$HOME/.veloherorc' containing"
+	echo
+	echo "----- snip -------------------------------------------------------------"
+	echo
+	echo "VELOHERO_SSO_KEY=[insert your own]"
+	echo
+	echo "----- snap -------------------------------------------------------------"
+	echo
+	echo "Important: Do not use spaces!"
+	echo
+	exit 1
+}
+
+
+#####################################################################
+# Terminal output helpers
+#####################################################################
+
+# exit_with_failure() outputs a message before exiting the script.
+function exit_with_failure() {
+	echo
+	echo "FAILURE: $1"
+	echo
+	exit 9
+}
+
+# success_notification() displays under macOS a success notification
+function success_notification() {
+	if command_exists osascript; then
+		osascript -e 'display notification "Upload successfully completed 👍   " with title "Velo Hero"' 2>&1
+	fi
+}
+
+
+#####################################################################
+# Other helpers
+#####################################################################
+
+# check_sso_login() checks the login
+function check_sso_login() {
+	if ! curl "https://app.velohero.com/sso" -F sso="$VELOHERO_SSO_KEY" -F view="json" -o "/dev/null" --silent --fail -A "$MY_USERAGENT" --compressed; then
+		exit_with_failure "Login failed! Single Sign-on key not found or expired. Please get a new one."
+	fi
+}
+
+# command_exists() tells if a given command exists.
+function command_exists() {
+	command -v "$1" >/dev/null 2>&1
+}
+
+
+
+
+#####################################################################
+# Let's start
+#####################################################################
+
+if ! command_exists curl; then
+	exit_with_failure "'curl' is needed. Please install 'curl'. More details can be found at https://curl.haxx.se/"
+fi
+
+if [ ! -f "$HOME/.veloherorc" ]; then
+	echo_sso_key_help
+fi
+
+# shellcheck source=/Users/nils/.veloherorc
+source "$HOME/.veloherorc"
+
+if [ $# -ne 1 ]; then
+	echo "Usage: $PROG <file>"
+	exit 1
+fi
+
+# Check file type
+filename=$(basename "$1")
+suffix="${filename##*.}"
+datatype=""
+if [ "$suffix" = "fit" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "tcx" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "gpx" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "srm" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "hrm" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "pwx" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "slf" ]; then
+	datatype="$suffix"
+fi
+if [ "$suffix" = "slm" ]; then
+	datatype="$suffix"
+fi
+if [ "$datatype" = "" ]; then
+	exit_with_failure "Unknown file type '$suffix'"
+fi
+
+# Test whether file exists
+[ -f "$1" ] || exit_with_failure "Input file '$1' not found."
+
+# Get authorization code
+if [ "$VELOHERO_SSO_KEY" ]; then
+	# Check login
+	check_sso_login
+	# Upload file
+	echo "File is being uploaded. Please wait..."
+	if curl -X POST "https://app.velohero.com/upload/file" -v -F file=@"$1" -F sso="$VELOHERO_SSO_KEY" -F view="txt" -A "$MY_USERAGENT"; then
+		success_notification
+	else
+		exit_with_failure "Can not upload file."
+	fi
+	echo
+else
+	echo_sso_key_help
+fi
+
