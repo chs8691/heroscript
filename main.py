@@ -48,6 +48,7 @@ def execute_set():
     workout_dur_time = get_simple_input(tree, 'workout_dur_time')['value']
     sport_id = get_select_values_value(tree, 'sport_id')
     type_id = get_select_values_value(tree, 'type_id')
+    route_id = get_select_values_value(tree, 'route_id')
     workout_dsc_m = get_simple_input(tree, 'workout_dsc_m')['value']
     workout_alt_min_m = get_simple_input(tree, 'workout_alt_min_m')['value']
     workout_alt_max_m = get_simple_input(tree, 'workout_alt_max_m')['value']
@@ -56,6 +57,7 @@ def execute_set():
     workout_hr_avg_bpm = get_simple_input(tree, 'workout_hr_avg_bpm')['value']
     workout_hr_max_bpm = get_simple_input(tree, 'workout_hr_max_bpm')['value']
     workout_comment = get_textarea(tree, 'workout_comment')['value']
+    equipment_ids = get_select_values_values(tree, 'equipment_ids')
 
     log('Actual data', ":")
     log('workout_date', workout_date)
@@ -65,6 +67,7 @@ def execute_set():
     log('workout_dur_time', workout_dur_time)
     log('sport_id', sport_id)
     log('type_id', type_id)
+    log('route_id', route_id)
     log('workout_dsc_m', workout_dsc_m)
     log('workout_alt_min_m', workout_alt_min_m)
     log('workout_alt_max_m', workout_alt_max_m)
@@ -72,14 +75,19 @@ def execute_set():
     log('workout_spd_max_kph', workout_spd_max_kph)
     log('workout_hr_avg_bpm', workout_hr_avg_bpm)
     log('workout_hr_max_bpm', workout_hr_max_bpm)
+    log('equipment_ids', equipment_ids)
     log('workout_comment', workout_comment)
 
     # Options
     sport_id_dict = get_select_values(tree, 'sport_id')
     type_id_dict = get_select_values(tree, 'type_id')
+    route_id_dict = get_select_values(tree, 'route_id')
+    equipment_ids_dict = get_select_values(tree, 'equipment_ids')
 
     log('sport_id_dict', sport_id_dict)
     log('type_id_dict', type_id_dict)
+    log('route_id_dict', route_id_dict)
+    log('equipment_ids_dict', equipment_ids_dict)
 
     # Update fields
     if args.workout_date:
@@ -96,6 +104,8 @@ def execute_set():
         sport_id = get_selected_id(sport_id_dict, args.sport_id)
     if args.type_id:
         type_id = get_selected_id(type_id_dict, args.type_id)
+    if args.route_id:
+        route_id = get_selected_id(route_id_dict, args.route_id)
     if args.workout_dsc_m:
         workout_dsc_m = args.workout_dsc_m
     if args.workout_alt_min_m:
@@ -110,6 +120,8 @@ def execute_set():
         workout_hr_avg_bpm = args.workout_hr_avg_bpm
     if args.workout_hr_max_bpm:
         workout_hr_max_bpm = args.workout_hr_max_bpm
+    if args.equipment_ids:
+        equipment_ids = get_selected_ids(equipment_ids_dict, args.equipment_ids)
     if args.workout_comment:
         workout_comment = args.workout_comment
 
@@ -121,6 +133,7 @@ def execute_set():
     log('workout_dur_time', workout_dur_time)
     log('sport_id', sport_id)
     log('type_id', type_id)
+    log('route_id', route_id)
     log('workout_dsc_m', workout_dsc_m)
     log('workout_alt_min_m', workout_alt_min_m)
     log('workout_alt_max_m', workout_alt_max_m)
@@ -128,6 +141,7 @@ def execute_set():
     log('workout_spd_max_kph', workout_spd_max_kph)
     log('workout_hr_avg_bpm', workout_hr_avg_bpm)
     log('workout_hr_max_bpm', workout_hr_max_bpm)
+    log('equipment_ids', equipment_ids)
     log('workout_comment', workout_comment)
 
     url = "https://app.velohero.com/workouts/edit/{}".format(args.activity_id)
@@ -148,6 +162,7 @@ def execute_set():
                           'workout_dur_time': workout_dur_time,
                           'sport_id': sport_id,
                           'type_id': type_id,
+                          'route_id': route_id,
                           'workout_dsc_m': workout_dsc_m,
                           'workout_alt_min_m': workout_alt_min_m,
                           'workout_alt_max_m': workout_alt_max_m,
@@ -156,6 +171,7 @@ def execute_set():
                           'workout_hr_avg_bpm': workout_hr_avg_bpm,
                           'workout_hr_max_bpm': workout_hr_max_bpm,
                           'workout_comment': workout_comment,
+                          'equipment_ids': equipment_ids,
                           # 'equipment_ids': ['17481', '3793'],
                       })
 
@@ -172,7 +188,7 @@ def get_selected_id(select_dict, value):
     Exits script, if value is invalid
     :param select_dict: Dictionary which describes the data
     :param value: id or description
-    :return: id or, in inital case, empty string
+    :return: id or, in initial case, empty string
     """
     if value.isdigit():
         key = 'id'
@@ -186,6 +202,39 @@ def get_selected_id(select_dict, value):
         return res
     except IndexError:
         exit_on_rc_error("Unknown value", value)
+
+
+def get_selected_ids(select_dict, values):
+    """
+    Exits script, if value is invalid
+    :param select_dict: Dictionary which describes the data
+    :param values: String with list with ids or descriptions, e.g. "", "123, 345, 56756"
+    :return: List with ids or, in initial case, empty string
+    """
+
+    ret = []
+
+    # Empty list or empty string
+    if len(values) == 0:
+        return ret
+
+    value_list = values.split(", ")
+
+    for value in value_list:
+        if value.isdigit():
+            key = 'id'
+            log('res is digit', value)
+        else:
+            key = 'description'
+
+        try:
+            res = [v for v in select_dict['values'] if v[key] == value][0]['id']
+            log('res', res)
+            ret.append(res)
+        except IndexError:
+            exit_on_rc_error("Unknown value", value)
+
+    return ret
 
 
 def execute_show():
@@ -213,6 +262,8 @@ def execute_show():
     print_select_values(tree, "sport_id")
     print("")
     print_select_values(tree, "type_id")
+    print("")
+    print_select_values(tree, "route_id")
     print("")
     print_select_values(tree, "equipment_ids")
 
@@ -256,13 +307,27 @@ def get_select_values_value(tree, name):
         return values[0]['id']
 
 
+def get_select_values_values(tree, name):
+    """
+    Returns only the values of a select field
+    :return: List with values, list can be empty
+    """
+    values = [v for v in get_select_values(tree, name)['values'] if v['selected']]
+
+    ret = []
+    for value in values:
+        ret.append(value['id'])
+
+    return ret
+
+
 def get_select_values(tree, name):
     """
     Returns dictionary with id, value, description, for instance
             dict=(id='sport_id',
                   description='Sportart',
-                  values=[(id=1, description='Radsport', selectecd=True),
-                        id=6, description='Mountainbike', selected=False),
+                  values=[(id=1, description='Radsport', data-subtext=None, selectecd=True),
+                        id=6, description='Mountainbike', data-subtext=None, selected=False),
                         ...
                       ]),
 
@@ -294,9 +359,14 @@ def get_select_values(tree, name):
             else:
                 # log('selected', "False")
                 selected = False
+            if option.get('data-subtext'):
+                data_subtext=option.get('data-subtext')
+            else:
+                data_subtext = None
 
             ret['values'].append(dict(id=option.get('value'),
                                       description=option.text,
+                                      data_subtext=data_subtext,
                                       selected=selected))
 
     except IndexError as e:
@@ -370,10 +440,17 @@ def print_select_values(tree, name):
     print("%s '%s':" % (data['id'], data['description']))
 
     for option in [o for o in data['values'] if o['id'] is not None]:
-        if option['selected'] is True:
-            print(">>> %s (%s) <<< SELECTED" % (option['description'], option['id']))
+
+        # Only route_id can have a subtext with distance-value
+        if not option['data_subtext'] is None:
+            subtext = " / %s" % option['data_subtext']
         else:
-            print("    %s (%s)" % (option['description'], option['id']))
+            subtext = ""
+
+        if option['selected'] is True:
+            print(">>> %s%s (%s) <<<-------- SELECTED" % (option['description'], subtext, option['id']))
+        else:
+            print("    %s%s (%s)" % (option['description'], subtext, option['id']))
 
 
 def print_simple_input(tree, name):
@@ -443,69 +520,86 @@ def parse_args():
 
     set_parser.add_argument("-i", "--activity_id",
                             required=True,
-                            help="Velohero activity ID.. Example: '4075724'")
-
-    set_parser.add_argument("-dist_km", "--workout_dist_km",
-                            required=False,
-                            help="Field 'workout_dist_km'. Example: '12345'")
-
-    set_parser.add_argument("-asc_m", "--workout_asc_m",
-                            required=False,
-                            help="Field 'workout_asc_m'. Example: '1234'")
+                            help="Velohero activity ID. Example: '4075724'")
 
     set_parser.add_argument("-date", "--workout_date",
                             required=False,
-                            help="Field 'workout_date'. Example: '31.12.2020'")
+                            help="Set Date (field 'workout_date'). Example: '31.12.2020' or '2020-12-31")
 
     set_parser.add_argument("-time", "--workout_start_time",
                             required=False,
-                            help="Field 'workout_start_time'. Example: '17:59:00'")
+                            help="Set Start Time (Field 'workout_start_time'). Example: '17:59:00'")
 
     set_parser.add_argument("-dur", "--workout_dur_time",
                             required=False,
-                            help="Field 'workout_dur_time'. Example: '2:23:00'")
+                            help="Set Duration (field 'workout_dur_time'). Example: '2:23:00'")
 
     set_parser.add_argument("-sport", "--sport_id",
                             required=False,
-                            help="Field 'sport_id'. Value can be id or description (case sensitive). "
+                            help="Set Sport (field 'sport_id'). Value can be id or description (case sensitive). "
                                  "Examples: '1', 'Mountainbike")
 
     set_parser.add_argument("-type", "--type_id",
                             required=False,
-                            help="Field 'type_id'. Value can be id or description (case sensitive). "
-                                 "Examples: '7431', 'Training")
+                            help="Set value Training type (field 'type_id'). Value can be id or description "
+                                 "(case sensitive). Examples: '7431', 'Training")
+
+    set_parser.add_argument("-route", "--route_id",
+                            required=False,
+                            help="Set value Route (field 'route_id'). Value can be id or description "
+                                 "(case sensitive). Examples: '12345', 'Berlin Marathon")
+
+    set_parser.add_argument("-dist", "--workout_dist_km",
+                            required=False,
+                            help="Set Distance (field 'workout_dist_km') in your unit (configured in Velohero). "
+                                 "Example: '12345'")
+
+    set_parser.add_argument("-asc", "--workout_asc_m",
+                            required=False,
+                            help="Set Ascent (Field 'workout_asc_m') in your unit (configured in Velohero)."
+                                 " Example: '1234'")
 
     set_parser.add_argument("-dsc_m", "--workout_dsc_m",
                             required=False,
-                            help="Field 'workout_dsc_m'. Example: '1234'")
+                            help="Set Descent (field 'workout_dsc_m') in your unit (configured in Velohero)."
+                                 " Example: '1234'")
 
-    set_parser.add_argument("-alt_min_m", "--workout_alt_min_m",
+    set_parser.add_argument("-alt_min", "--workout_alt_min_m",
                             required=False,
-                            help="Field 'workout_alt_min_m'. Example: '100'")
+                            help="Set Minimum Altitude (field 'aworkout_alt_min_m')"
+                                 " in your unit (configured in Velohero). Example: '100'")
 
-    set_parser.add_argument("-alt_max_m", "--workout_alt_max_m",
+    set_parser.add_argument("-alt_max", "--workout_alt_max_m",
                             required=False,
-                            help="Field 'workout_alt_max_m'. Example: '1000'")
+                            help="Set Maximum Altitude )field 'workout_alt_max_m') "
+                                 "in your unit (configured in Velohero). Example: '1000'")
 
-    set_parser.add_argument("-spd_avg_kph", "--workout_spd_avg_kph",
+    set_parser.add_argument("-spd_avg", "--workout_spd_avg_kph",
                             required=False,
-                            help="Field 'workout_spd_avg_kph'. Example: '23.4'")
+                            help="Set Average Speed (field 'workout_spd_avg_kph') "
+                                 "in your unit (configured in Velohero). Example: '23.4'")
 
     set_parser.add_argument("-spd_max_kph", "--workout_spd_max_kph",
                             required=False,
-                            help="Field 'workout_spd_max_kph'. Example: '45.6'")
+                            help="Set Maximum Speed (field 'workout_spd_max_kph') "
+                                 "in your unit (configured in Velohero). Example: '45.6'")
 
     set_parser.add_argument("-hr_avg_bpm", "--workout_hr_avg_bpm",
                             required=False,
-                            help="Field 'workout_hr_avg_bpm'. Example: '123'")
+                            help="Set Average Heart Rate (field 'workout_hr_avg_bpm'). Example: '123'")
 
     set_parser.add_argument("-hr_max_bpm", "--workout_hr_max_bpm",
                             required=False,
-                            help="Field 'workout_hr_max_bpm'. Example: '171'")
+                            help="Set Maximum Heart Rate (field 'workout_hr_max_bpm'). Example: '171'")
+
+    set_parser.add_argument("-equipment", "--equipment_ids",
+                            required=False,
+                            help="Set values for Equipments (field 'equipments_ids'). "
+                                 "Examples: '29613, 12345', ''")
 
     set_parser.add_argument("-comment", "--workout_comment",
                             required=False,
-                            help="Field 'workout_comment'. Example: 'Frist line '")
+                            help="Field 'workout_comment'. Example: 'Got a bonk.'")
 
     set_parser.set_defaults(func=execute_set)
 
@@ -608,7 +702,7 @@ def do_post_workout(file_name):
 
 def do_upload(file_name):
     """
-    File must exist and of a valid type
+    File must exist and of a valid route
     Returns Activity ID or False
     """
     log("upload file", file_name)
