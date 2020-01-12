@@ -24,21 +24,31 @@ def execute_upload():
     log("execute_upload", "start")
     check_sso_login()
 
-    activity_id = -1
+    workout_id = -1
     if args.file:
-        activity_id = do_upload(args.file)
+        workout_id = do_upload(args.file)
+        do_set(workout_id)
 
     log("upload", "end")
 
 
 def execute_set():
+    log("execute_set", "start")
+    check_sso_login()
+
+    do_set(args.workout_id)
+
+    log("execute_set", "end")
+
+
+def do_set(workout_id):
     """
     Update existing workout
     """
     log("execute_set", "start")
     check_sso_login()
 
-    tree = load_workout_data(args.activity_id)
+    tree = load_workout_data(workout_id)
 
     # Init all field with old data
     workout_date = get_simple_input(tree, 'workout_date')['value']
@@ -144,7 +154,7 @@ def execute_set():
     log('equipment_ids', equipment_ids)
     log('workout_comment', workout_comment)
 
-    url = "https://app.velohero.com/workouts/edit/{}".format(args.activity_id)
+    url = "https://app.velohero.com/workouts/edit/{}".format(workout_id)
     log("url", str(url))
 
     # Must contains all workout fields
@@ -241,7 +251,7 @@ def execute_show():
     log("execute_show", "start")
     check_sso_login()
 
-    tree = load_workout_data(args.activity_id)
+    tree = load_workout_data(args.workout_id)
     # log("response", str(r.text))
 
     print_simple_input(tree, 'workout_date')
@@ -360,7 +370,7 @@ def get_select_values(tree, name):
                 # log('selected', "False")
                 selected = False
             if option.get('data-subtext'):
-                data_subtext=option.get('data-subtext')
+                data_subtext = option.get('data-subtext')
             else:
                 data_subtext = None
 
@@ -470,20 +480,20 @@ def print_textarea(tree, name):
 def parse_args():
     """
     Examples:
-        Show info of an activity file:
+        Show info of an workout file:
             main.py info --file=20191221-150315-activity_4355570485.tcx
             main.py info --directory=/home/chris/newActivities
 
-        Upload an activity file and set an attribute:
+        Upload an workout file and set an attribute:
             main.py upload --file=20191221-150315-activity_4355570485.tcx --sport_id='Mountainbike'
 
         Pick next file from a directory, upload and set value:
             main.py upload --directory=/home/chris/newActivities --sport_id='Mountainbike'
 
-        Show activity's attributes:
+        Show workout's attributes:
             main.py show --id=4075724
 
-        Update attribute of an an existing activity:
+        Update attribute of an an existing workout:
             main.py set --id=4075724 --sport_id=Mountainbike
 
     """
@@ -497,111 +507,118 @@ def parse_args():
 
     sub_parsers = parser.add_subparsers()
 
+    # ######### show #########
+    show_parser = sub_parsers.add_parser('show', help="Show existing workout in velohero")
+
+    show_parser.add_argument("-i", "--workout_id",
+                             required=True,
+                             help="Velohero workout ID.")
+
+    show_parser.set_defaults(func=execute_show)
+
+    # shared arguments for set and upload
+    field_parser = argparse.ArgumentParser(add_help=False)
+
+    field_parser.add_argument("-date", "--workout_date",
+                              required=False,
+                              help="Set Date (field 'workout_date'). Example: '31.12.2020' or '2020-12-31")
+
+    field_parser.add_argument("-time", "--workout_start_time",
+                              required=False,
+                              help="Set Start Time (Field 'workout_start_time'). Example: '17:59:00'")
+
+    field_parser.add_argument("-dur", "--workout_dur_time",
+                              required=False,
+                              help="Set Duration (field 'workout_dur_time'). Example: '2:23:00'")
+
+    field_parser.add_argument("-sport", "--sport_id",
+                              required=False,
+                              help="Set Sport (field 'sport_id'). Value can be id or description (case sensitive). "
+                                   "Examples: '1', 'Mountainbike")
+
+    field_parser.add_argument("-type", "--type_id",
+                              required=False,
+                              help="Set value Training type (field 'type_id'). Value can be id or description "
+                                   "(case sensitive). Examples: '7431', 'Training")
+
+    field_parser.add_argument("-route", "--route_id",
+                              required=False,
+                              help="Set value Route (field 'route_id'). Value can be id or description "
+                                   "(case sensitive). Examples: '12345', 'Berlin Marathon")
+
+    field_parser.add_argument("-dist", "--workout_dist_km",
+                              required=False,
+                              help="Set Distance (field 'workout_dist_km') in your unit (configured in Velohero). "
+                                   "Example: '12345'")
+
+    field_parser.add_argument("-asc", "--workout_asc_m",
+                              required=False,
+                              help="Set Ascent (Field 'workout_asc_m') in your unit (configured in Velohero)."
+                                   " Example: '1234'")
+
+    field_parser.add_argument("-dsc_m", "--workout_dsc_m",
+                              required=False,
+                              help="Set Descent (field 'workout_dsc_m') in your unit (configured in Velohero)."
+                                   " Example: '1234'")
+
+    field_parser.add_argument("-alt_min", "--workout_alt_min_m",
+                              required=False,
+                              help="Set Minimum Altitude (field 'aworkout_alt_min_m')"
+                                   " in your unit (configured in Velohero). Example: '100'")
+
+    field_parser.add_argument("-alt_max", "--workout_alt_max_m",
+                              required=False,
+                              help="Set Maximum Altitude )field 'workout_alt_max_m') "
+                                   "in your unit (configured in Velohero). Example: '1000'")
+
+    field_parser.add_argument("-spd_avg", "--workout_spd_avg_kph",
+                              required=False,
+                              help="Set Average Speed (field 'workout_spd_avg_kph') "
+                                   "in your unit (configured in Velohero). Example: '23.4'")
+
+    field_parser.add_argument("-spd_max_kph", "--workout_spd_max_kph",
+                              required=False,
+                              help="Set Maximum Speed (field 'workout_spd_max_kph') "
+                                   "in your unit (configured in Velohero). Example: '45.6'")
+
+    field_parser.add_argument("-hr_avg_bpm", "--workout_hr_avg_bpm",
+                              required=False,
+                              help="Set Average Heart Rate (field 'workout_hr_avg_bpm'). Example: '123'")
+
+    field_parser.add_argument("-hr_max_bpm", "--workout_hr_max_bpm",
+                              required=False,
+                              help="Set Maximum Heart Rate (field 'workout_hr_max_bpm'). Example: '171'")
+
+    field_parser.add_argument("-equipment", "--equipment_ids",
+                              required=False,
+                              help="Set values for Equipments (field 'equipments_ids'). "
+                                   "Examples: '29613, 12345', ''")
+
+    field_parser.add_argument("-comment", "--workout_comment",
+                              required=False,
+                              help="Field 'workout_comment'. Example: 'Got a bonk.'")
+
+    # # ######### set #########
+    set_parser = sub_parsers.add_parser('set',
+                                        parents=[field_parser],
+                                        help="Set attributes for an existing workout")
+
+    set_parser.add_argument("-i", "--workout_id",
+                            required=True,
+                            help="Velohero workout ID. Example: '4075724'")
+
+    set_parser.set_defaults(func=execute_set)
+
     # ######### upload #########
-    upload_parser = sub_parsers.add_parser('upload', help="Upload activity file to velohero")
+    upload_parser = sub_parsers.add_parser('upload',
+                                           parents=[field_parser],
+                                           help="Upload workout file to velohero")
 
     upload_parser.add_argument("-f", "--file",
                                required=True,
                                help="Name (path) to the track file to upload")
 
     upload_parser.set_defaults(func=execute_upload)
-
-    # ######### show #########
-    show_parser = sub_parsers.add_parser('show', help="Show existing activity in velohero")
-
-    show_parser.add_argument("-i", "--activity_id",
-                             required=True,
-                             help="Velohero activity ID.")
-
-    show_parser.set_defaults(func=execute_show)
-
-    # ######### set #########
-    set_parser = sub_parsers.add_parser('set', help="Set attributes for an existing activity")
-
-    set_parser.add_argument("-i", "--activity_id",
-                            required=True,
-                            help="Velohero activity ID. Example: '4075724'")
-
-    set_parser.add_argument("-date", "--workout_date",
-                            required=False,
-                            help="Set Date (field 'workout_date'). Example: '31.12.2020' or '2020-12-31")
-
-    set_parser.add_argument("-time", "--workout_start_time",
-                            required=False,
-                            help="Set Start Time (Field 'workout_start_time'). Example: '17:59:00'")
-
-    set_parser.add_argument("-dur", "--workout_dur_time",
-                            required=False,
-                            help="Set Duration (field 'workout_dur_time'). Example: '2:23:00'")
-
-    set_parser.add_argument("-sport", "--sport_id",
-                            required=False,
-                            help="Set Sport (field 'sport_id'). Value can be id or description (case sensitive). "
-                                 "Examples: '1', 'Mountainbike")
-
-    set_parser.add_argument("-type", "--type_id",
-                            required=False,
-                            help="Set value Training type (field 'type_id'). Value can be id or description "
-                                 "(case sensitive). Examples: '7431', 'Training")
-
-    set_parser.add_argument("-route", "--route_id",
-                            required=False,
-                            help="Set value Route (field 'route_id'). Value can be id or description "
-                                 "(case sensitive). Examples: '12345', 'Berlin Marathon")
-
-    set_parser.add_argument("-dist", "--workout_dist_km",
-                            required=False,
-                            help="Set Distance (field 'workout_dist_km') in your unit (configured in Velohero). "
-                                 "Example: '12345'")
-
-    set_parser.add_argument("-asc", "--workout_asc_m",
-                            required=False,
-                            help="Set Ascent (Field 'workout_asc_m') in your unit (configured in Velohero)."
-                                 " Example: '1234'")
-
-    set_parser.add_argument("-dsc_m", "--workout_dsc_m",
-                            required=False,
-                            help="Set Descent (field 'workout_dsc_m') in your unit (configured in Velohero)."
-                                 " Example: '1234'")
-
-    set_parser.add_argument("-alt_min", "--workout_alt_min_m",
-                            required=False,
-                            help="Set Minimum Altitude (field 'aworkout_alt_min_m')"
-                                 " in your unit (configured in Velohero). Example: '100'")
-
-    set_parser.add_argument("-alt_max", "--workout_alt_max_m",
-                            required=False,
-                            help="Set Maximum Altitude )field 'workout_alt_max_m') "
-                                 "in your unit (configured in Velohero). Example: '1000'")
-
-    set_parser.add_argument("-spd_avg", "--workout_spd_avg_kph",
-                            required=False,
-                            help="Set Average Speed (field 'workout_spd_avg_kph') "
-                                 "in your unit (configured in Velohero). Example: '23.4'")
-
-    set_parser.add_argument("-spd_max_kph", "--workout_spd_max_kph",
-                            required=False,
-                            help="Set Maximum Speed (field 'workout_spd_max_kph') "
-                                 "in your unit (configured in Velohero). Example: '45.6'")
-
-    set_parser.add_argument("-hr_avg_bpm", "--workout_hr_avg_bpm",
-                            required=False,
-                            help="Set Average Heart Rate (field 'workout_hr_avg_bpm'). Example: '123'")
-
-    set_parser.add_argument("-hr_max_bpm", "--workout_hr_max_bpm",
-                            required=False,
-                            help="Set Maximum Heart Rate (field 'workout_hr_max_bpm'). Example: '171'")
-
-    set_parser.add_argument("-equipment", "--equipment_ids",
-                            required=False,
-                            help="Set values for Equipments (field 'equipments_ids'). "
-                                 "Examples: '29613, 12345', ''")
-
-    set_parser.add_argument("-comment", "--workout_comment",
-                            required=False,
-                            help="Field 'workout_comment'. Example: 'Got a bonk.'")
-
-    set_parser.set_defaults(func=execute_set)
 
     args = parser.parse_args()
 
@@ -664,7 +681,7 @@ def check_sso_login():
 
 def do_post_workout(file_name):
     """
-    Send form data to an existing activity
+    Send form data to an existing workout
     """
     log("do_post_workout", "begin")
 
@@ -703,7 +720,7 @@ def do_post_workout(file_name):
 def do_upload(file_name):
     """
     File must exist and of a valid route
-    Returns Activity ID or False
+    Returns workout ID or False
     """
     log("upload file", file_name)
 
