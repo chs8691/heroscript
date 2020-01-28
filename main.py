@@ -1,482 +1,44 @@
+import sys
+
+from process import process_transfer, process_set, process_load, process_show
+from velohero import velohero_process_show, velohero_process_update, velohero_process_upload
+from utility import set_log_switch, exit_on_error
+
 import argparse
-from sys import argv
-from pathlib import Path as pathlib_Path
-from os import path
-import re
-import json
-import requests as requests
-from lxml import html
-from html import unescape
-
-args = None
-
-# Filled with ID for SSO login
-sso_id = None
-
-# Constant with file name in the users directory
-rc_file = ".veloherorc"
-
-# User-Agent string
-my_user_agent = "veloheroup/1.0"
 
 
-def execute_upload():
-    log("execute_upload", "start")
-    check_sso_login()
+def execute_velohero_upload():
+    velohero_process_upload(args)
 
-    workout_id = -1
-    if args.file:
-        workout_id = do_upload(args.file)
-        do_set(workout_id)
 
-    log("upload", "end")
+def execute_velohero_update():
+   velohero_process_update(args)
+
+
+def execute_velohero_show():
+    velohero_process_show(args)
+
+
+def execute_transfer():
+    process_transfer(args)
 
 
 def execute_set():
-    log("execute_set", "start")
-    check_sso_login()
-
-    do_set(args.workout_id)
-
-    log("execute_set", "end")
-
-
-def do_set(workout_id):
-    """
-    Update existing workout
-    """
-    log("execute_set", "start")
-    check_sso_login()
-
-    tree = load_workout_data(workout_id)
-
-    # Init all field with old data
-    workout_date = get_simple_input(tree, 'workout_date')['value']
-    workout_start_time = get_simple_input(tree, 'workout_start_time')['value']
-    workout_dist_km = get_simple_input(tree, 'workout_dist_km')['value']
-    workout_asc_m = get_simple_input(tree, 'workout_asc_m')['value']
-    workout_dur_time = get_simple_input(tree, 'workout_dur_time')['value']
-    sport_id = get_select_values_value(tree, 'sport_id')
-    type_id = get_select_values_value(tree, 'type_id')
-    route_id = get_select_values_value(tree, 'route_id')
-    workout_dsc_m = get_simple_input(tree, 'workout_dsc_m')['value']
-    workout_alt_min_m = get_simple_input(tree, 'workout_alt_min_m')['value']
-    workout_alt_max_m = get_simple_input(tree, 'workout_alt_max_m')['value']
-    workout_spd_avg_kph = get_simple_input(tree, 'workout_spd_avg_kph')['value']
-    workout_spd_max_kph = get_simple_input(tree, 'workout_spd_max_kph')['value']
-    workout_hr_avg_bpm = get_simple_input(tree, 'workout_hr_avg_bpm')['value']
-    workout_hr_max_bpm = get_simple_input(tree, 'workout_hr_max_bpm')['value']
-    workout_comment = get_textarea(tree, 'workout_comment')['value']
-    equipment_ids = get_select_values_values(tree, 'equipment_ids')
-
-    log('Actual data', ":")
-    log('workout_date', workout_date)
-    log('workout_start_time', workout_start_time)
-    log('workout_dist_km', workout_dist_km)
-    log('workout_asc_m', workout_asc_m)
-    log('workout_dur_time', workout_dur_time)
-    log('sport_id', sport_id)
-    log('type_id', type_id)
-    log('route_id', route_id)
-    log('workout_dsc_m', workout_dsc_m)
-    log('workout_alt_min_m', workout_alt_min_m)
-    log('workout_alt_max_m', workout_alt_max_m)
-    log('workout_spd_avg_kph', workout_spd_avg_kph)
-    log('workout_spd_max_kph', workout_spd_max_kph)
-    log('workout_hr_avg_bpm', workout_hr_avg_bpm)
-    log('workout_hr_max_bpm', workout_hr_max_bpm)
-    log('equipment_ids', equipment_ids)
-    log('workout_comment', workout_comment)
-
-    # Options
-    sport_id_dict = get_select_values(tree, 'sport_id')
-    type_id_dict = get_select_values(tree, 'type_id')
-    route_id_dict = get_select_values(tree, 'route_id')
-    equipment_ids_dict = get_select_values(tree, 'equipment_ids')
-
-    log('sport_id_dict', sport_id_dict)
-    log('type_id_dict', type_id_dict)
-    log('route_id_dict', route_id_dict)
-    log('equipment_ids_dict', equipment_ids_dict)
-
-    # Update fields
-    if args.workout_date:
-        workout_date = args.workout_date
-    if args.workout_start_time:
-        workout_start_time = args.workout_start_time
-    if args.workout_dist_km:
-        workout_dist_km = args.workout_dist_km
-    if args.workout_asc_m:
-        workout_asc_m = args.workout_asc_m
-    if args.workout_dur_time:
-        workout_dur_time = args.workout_dur_time
-    if args.sport_id:
-        sport_id = get_selected_id(sport_id_dict, args.sport_id)
-    if args.type_id:
-        type_id = get_selected_id(type_id_dict, args.type_id)
-    if args.route_id:
-        route_id = get_selected_id(route_id_dict, args.route_id)
-    if args.workout_dsc_m:
-        workout_dsc_m = args.workout_dsc_m
-    if args.workout_alt_min_m:
-        workout_alt_min_m = args.workout_alt_min_m
-    if args.workout_alt_max_m:
-        workout_alt_max_m = args.workout_alt_max_m
-    if args.workout_spd_avg_kph:
-        workout_spd_avg_kph = args.workout_spd_avg_kph
-    if args.workout_spd_max_kph:
-        workout_spd_max_kph = args.workout_spd_max_kph
-    if args.workout_hr_avg_bpm:
-        workout_hr_avg_bpm = args.workout_hr_avg_bpm
-    if args.workout_hr_max_bpm:
-        workout_hr_max_bpm = args.workout_hr_max_bpm
-    if args.equipment_ids:
-        equipment_ids = get_selected_ids(equipment_ids_dict, args.equipment_ids)
-    if args.workout_comment:
-        workout_comment = args.workout_comment
-
-    log('New data', ":")
-    log('workout_date', workout_date)
-    log('workout_start_time', workout_start_time)
-    log('workout_dist_km', workout_dist_km)
-    log('workout_asc_m', workout_asc_m)
-    log('workout_dur_time', workout_dur_time)
-    log('sport_id', sport_id)
-    log('type_id', type_id)
-    log('route_id', route_id)
-    log('workout_dsc_m', workout_dsc_m)
-    log('workout_alt_min_m', workout_alt_min_m)
-    log('workout_alt_max_m', workout_alt_max_m)
-    log('workout_spd_avg_kph', workout_spd_avg_kph)
-    log('workout_spd_max_kph', workout_spd_max_kph)
-    log('workout_hr_avg_bpm', workout_hr_avg_bpm)
-    log('workout_hr_max_bpm', workout_hr_max_bpm)
-    log('equipment_ids', equipment_ids)
-    log('workout_comment', workout_comment)
-
-    url = "https://app.velohero.com/workouts/edit/{}".format(workout_id)
-    log("url", str(url))
-
-    # Must contains all workout fields
-    r = requests.post(url,
-                      headers={
-                          'user-agent': my_user_agent,
-                      },
-                      data={
-                          'sso': sso_id,
-                          'submit': '1',
-                          'workout_date': workout_date,
-                          'workout_start_time': workout_start_time,
-                          'workout_dist_km': workout_dist_km,
-                          'workout_asc_m': workout_asc_m,
-                          'workout_dur_time': workout_dur_time,
-                          'sport_id': sport_id,
-                          'type_id': type_id,
-                          'route_id': route_id,
-                          'workout_dsc_m': workout_dsc_m,
-                          'workout_alt_min_m': workout_alt_min_m,
-                          'workout_alt_max_m': workout_alt_max_m,
-                          'workout_spd_avg_kph': workout_spd_avg_kph,
-                          'workout_spd_max_kph': workout_spd_max_kph,
-                          'workout_hr_avg_bpm': workout_hr_avg_bpm,
-                          'workout_hr_max_bpm': workout_hr_max_bpm,
-                          'workout_comment': workout_comment,
-                          'equipment_ids': equipment_ids,
-                          # 'equipment_ids': ['17481', '3793'],
-                      })
-
-    if r.status_code != 200:
-        exit_on_rc_error("HTTP error for {}".format(url), r.status_code)
-
-    # log("response", str(r.text))
-
-    log("set", "done")
-
-
-def get_selected_id(select_dict, value):
-    """
-    Exits script, if value is invalid
-    :param select_dict: Dictionary which describes the data
-    :param value: id or description
-    :return: id or, in initial case, empty string
-    """
-    if value.isdigit():
-        key = 'id'
-        log('res is digit', value)
-    else:
-        key = 'description'
-
-    try:
-        res = [v for v in select_dict['values'] if v[key] == value][0]['id']
-        log('res', res)
-        return res
-    except IndexError:
-        exit_on_rc_error("Unknown value", value)
-
-
-def get_selected_ids(select_dict, values):
-    """
-    Exits script, if value is invalid
-    :param select_dict: Dictionary which describes the data
-    :param values: String with list with ids or descriptions, e.g. "", "123, 345, 56756"
-    :return: List with ids or, in initial case, empty string
-    """
-
-    ret = []
-
-    # Empty list or empty string
-    if len(values) == 0:
-        return ret
-
-    value_list = values.split(", ")
-
-    for value in value_list:
-        if value.isdigit():
-            key = 'id'
-            log('res is digit', value)
-        else:
-            key = 'description'
-
-        try:
-            res = [v for v in select_dict['values'] if v[key] == value][0]['id']
-            log('res', res)
-            ret.append(res)
-        except IndexError:
-            exit_on_rc_error("Unknown value", value)
-
-    return ret
+    process_set(args)
 
 
 def execute_show():
-    log("execute_show", "start")
-    check_sso_login()
-
-    tree = load_workout_data(args.workout_id)
-    # log("response", str(r.text))
-
-    print_simple_input(tree, 'workout_date')
-    print_simple_input(tree, 'workout_start_time')
-    print_simple_input(tree, 'workout_dist_km')
-    print_simple_input(tree, 'workout_asc_m')
-    print_simple_input(tree, 'workout_dur_time')
-    print_simple_input(tree, 'workout_dsc_m')
-    print_simple_input(tree, 'workout_alt_min_m')
-    print_simple_input(tree, 'workout_alt_max_m')
-    print_simple_input(tree, 'workout_spd_avg_kph')
-    print_simple_input(tree, 'workout_spd_max_kph')
-    print_simple_input(tree, 'workout_hr_avg_bpm')
-    print_simple_input(tree, 'workout_hr_max_bpm')
-    print_textarea(tree, 'workout_comment')
-
-    print("")
-    print_select_values(tree, "sport_id")
-    print("")
-    print_select_values(tree, "type_id")
-    print("")
-    print_select_values(tree, "route_id")
-    print("")
-    print_select_values(tree, "equipment_ids")
+    process_show(args)
 
 
-def load_workout_data(workload_id):
-    """
-    Requests the workload for the given ID. Precondition: SSO established
-    Returns HTML tree
-    """
-    log("load_workload_data", "start")
-
-    # just for for testing
-    # return html.parse(open('workout.html', 'rt')).getroot()
-
-    url = "https://app.velohero.com/workouts/edit/{}".format(workload_id)
-    log("url", str(url))
-    r = requests.post(url,
-                      headers={
-                          'user-agent': my_user_agent,
-                      },
-                      data={
-                          'sso': sso_id,
-                      })
-
-    if r.status_code != 200:
-        exit_on_rc_error("HTTP error {} for {}".format(url, r.status_code))
-
-    return html.fromstring(r.text)
+def execute_load():
+    process_load(args)
 
 
-def get_select_values_value(tree, name):
-    """
-    Returns only the value of a select field
-    :return: Value or empty string
-    """
-    values = [v for v in get_select_values(tree, name)['values'] if v['selected']]
-
-    if len(values) == 0:
-        return ""
-    else:
-        return values[0]['id']
+args = None
 
 
-def get_select_values_values(tree, name):
-    """
-    Returns only the values of a select field
-    :return: List with values, list can be empty
-    """
-    values = [v for v in get_select_values(tree, name)['values'] if v['selected']]
-
-    ret = []
-    for value in values:
-        ret.append(value['id'])
-
-    return ret
-
-
-def get_select_values(tree, name):
-    """
-    Returns dictionary with id, value, description, for instance
-            dict=(id='sport_id',
-                  description='Sportart',
-                  values=[(id=1, description='Radsport', data-subtext=None, selectecd=True),
-                        id=6, description='Mountainbike', data-subtext=None, selected=False),
-                        ...
-                      ]),
-
-    """
-
-    try:
-
-        element = tree.xpath("//select[@id='%s']" % name)[0]
-
-        label_elements = tree.xpath("//label[@for='%s']" % name)
-
-        # Proper HTML: label has a for attribute
-        if len(label_elements) > 0:
-            label = label_elements[0].text
-
-        # Just for 'Material' / equipment_ids:
-        else:
-            label = element.getparent().getparent()[0].text
-
-        ret = dict(id=element.name,
-                   description=label,
-                   values=[])
-
-        # exclude empty item
-        for option in [o for o in element if len(o.get('value')) > 0]:
-            if option.get('selected'):
-                # log('selected', "True")
-                selected = True
-            else:
-                # log('selected', "False")
-                selected = False
-            if option.get('data-subtext'):
-                data_subtext = option.get('data-subtext')
-            else:
-                data_subtext = None
-
-            ret['values'].append(dict(id=option.get('value'),
-                                      description=option.text,
-                                      data_subtext=data_subtext,
-                                      selected=selected))
-
-    except IndexError as e:
-        exit_on_rc_error("Element '%s' error: %s " % (name, e))
-
-    return ret
-
-
-def get_textarea(tree, name):
-    """
-    Returns dictionary with id, value, description
-    """
-    log('get_text_area', str(name))
-    try:
-
-        label = tree.xpath("//label[@for='%s']" % name)[0].text
-        # label inside formatting element, e.g. <span>
-        if label is None:
-            label = tree.xpath("//label[@for='%s']" % name)[0][0].text
-
-        # log('label', label)
-        # log('textarea', str(tree.xpath("//textarea[@id='%s']" % name)[0].value))
-
-        element = tree.xpath("//textarea[@id='%s']" % name)[0]
-
-        # log('element.name', element.name)
-        # log('element.value', element.value)
-
-        ret = dict(id=element.name,
-                   value=element.value,
-                   description=label,
-                   )
-        # log("get_simple_input ret=", ret)
-        return ret
-
-    except IndexError:
-        exit_on_rc_error("Element not found: '%s'" % name)
-
-
-def get_simple_input(tree, name):
-    """
-    Returns dictionary with id, value, description
-    """
-    # log('get_simple_input', str(name))
-    try:
-
-        label = tree.xpath("//label[@for='%s']" % name)[0].text
-        # label inside formatting element, e.g. <span>
-        if label is None:
-            label = tree.xpath("//label[@for='%s']" % name)[0][0].text
-
-        # log('label', label)
-
-        element = tree.xpath("//input[@id='%s']" % name)[0]
-
-        # log('element', element)
-
-        ret = dict(id=element.name,
-                   value=element.value,
-                   description=label,
-                   )
-        # log("get_simple_input ret=", ret)
-        return ret
-
-    except IndexError:
-        exit_on_rc_error("Element not found: '%s'" % name)
-
-
-def print_select_values(tree, name):
-    data = get_select_values(tree, name)
-    print("%s '%s':" % (data['id'], data['description']))
-
-    for option in [o for o in data['values'] if o['id'] is not None]:
-
-        # Only route_id can have a subtext with distance-value
-        if not option['data_subtext'] is None:
-            subtext = " / %s" % option['data_subtext']
-        else:
-            subtext = ""
-
-        if option['selected'] is True:
-            print(">>> %s%s (%s) <<<-------- SELECTED" % (option['description'], subtext, option['id']))
-        else:
-            print("    %s%s (%s)" % (option['description'], subtext, option['id']))
-
-
-def print_simple_input(tree, name):
-    # log('print_simple_input', str(name))
-    data = get_simple_input(tree, name)
-
-    print("%s '%s' = %s" % (data['id'], data['description'], data['value']))
-
-
-def print_textarea(tree, name):
-    log('print_text_area', str(name))
-    data = get_textarea(tree, name)
-
-    print("%s '%s' = %s" % (data['id'], data['description'], data['value']))
-
-
+# def parse_args(execute_load, execute_set, execute_show, execute_upload, execute_vh_show, execute_vh_upload, execute_vh_update):
 def parse_args():
     """
     Examples:
@@ -507,272 +69,205 @@ def parse_args():
 
     sub_parsers = parser.add_subparsers()
 
-    # ######### show #########
-    show_parser = sub_parsers.add_parser('show', help="Show existing workout in velohero")
+    # ######### load #########
+    load_parser = sub_parsers.add_parser('load', help="Load a track file")
 
-    show_parser.add_argument("-i", "--workout_id",
-                             required=True,
-                             help="Velohero workout ID.")
+    load_parser.add_argument("-f", "--file",
+                             required=False,
+                             help="Name (path) to the track file to upload")
 
-    show_parser.set_defaults(func=execute_show)
+    load_parser.set_defaults(func=execute_load)
 
-    # shared arguments for set and upload
-    field_parser = argparse.ArgumentParser(add_help=False)
+    # ######### set #########
+    set_parser = sub_parsers.add_parser('set', help="Set attributes for a loaded track file")
 
-    field_parser.add_argument("-date", "--workout_date",
-                              required=False,
-                              help="Set Date (field 'workout_date'). Example: '31.12.2020' or '2020-12-31")
+    set_parser.add_argument("-a", "--activity_type",
+                            required=False,
+                            choices=['run', 'mtb', 'roadbike', 'fitness', 'hiking'],
+                            help="Set the activity type to Running, Mountain Biking, Road Cycling, Fitness or Hiking")
 
-    field_parser.add_argument("-time", "--workout_start_time",
-                              required=False,
-                              help="Set Start Time (Field 'workout_start_time'). Example: '17:59:00'")
+    set_parser.add_argument("-t", "--training_type",
+                            required=False,
+                            help="Set the training type by its name (unset with ''). "
+                                 "The name must exactly match the defined one in Velohero. "
+                                 "Examples: 'Pendel', 'Training' or  ''")
 
-    field_parser.add_argument("-dur", "--workout_dur_time",
-                              required=False,
-                              help="Set Duration (field 'workout_dur_time'). Example: '2:23:00'")
+    set_parser.add_argument("-r", "--route_name",
+                                 required=False,
+                                 help="Set value for the route by its name. Unset with ''. "
+                                      "The name must match (case insensitive) the route name exactly or a unique substring of it. "
+                                      "Examples: 'Goldbach Wintercross 10 KM', 'goldbach', '")
 
-    field_parser.add_argument("-sport", "--sport_id",
-                              required=False,
-                              help="Set Sport (field 'sport_id'). Value can be id or description (case sensitive). "
-                                   "Examples: '1', 'Mountainbike")
+    set_parser.add_argument("-e", "--equipment_names",
+                                 required=False,
+                                 help="Set values for Equipments by its names, delimeted by a comma (','). Unset with ''. "
+                                      "The name must match (case insensitive) the material name exactly or a unique substring of it. "
+                                      "Examples: 'Laufschuhe Saucony Ride ISO, MTB Focus', ''")
 
-    field_parser.add_argument("-type", "--type_id",
-                              required=False,
-                              help="Set value Training type (field 'type_id'). Value can be id or description "
-                                   "(case sensitive). Examples: '7431', 'Training")
+    set_parser.add_argument("-c", "--comment",
+                            required=False,
+                            help="Set the comment (unset with ''). "
+                                 "Examples: 'Wonderful weather', or  ''")
 
-    field_parser.add_argument("-route", "--route_id",
-                              required=False,
-                              help="Set value Route (field 'route_id'). Value can be id or description "
-                                   "(case sensitive). Examples: '12345', 'Berlin Marathon")
+    set_parser.add_argument("-v", "--velohero_workout_id",
+                                required=False,
+                                help="Velohero workout ID. If set, the upload command only udpates the existing workout "
+                                     "in Velohero. Set ID to '0' to force an upload. Examples: '4124109' or '0'")
 
-    field_parser.add_argument("-dist", "--workout_dist_km",
-                              required=False,
-                              help="Set Distance (field 'workout_dist_km') in your unit (configured in Velohero). "
-                                   "Example: '12345'")
-
-    field_parser.add_argument("-asc", "--workout_asc_m",
-                              required=False,
-                              help="Set Ascent (Field 'workout_asc_m') in your unit (configured in Velohero)."
-                                   " Example: '1234'")
-
-    field_parser.add_argument("-dsc_m", "--workout_dsc_m",
-                              required=False,
-                              help="Set Descent (field 'workout_dsc_m') in your unit (configured in Velohero)."
-                                   " Example: '1234'")
-
-    field_parser.add_argument("-alt_min", "--workout_alt_min_m",
-                              required=False,
-                              help="Set Minimum Altitude (field 'aworkout_alt_min_m')"
-                                   " in your unit (configured in Velohero). Example: '100'")
-
-    field_parser.add_argument("-alt_max", "--workout_alt_max_m",
-                              required=False,
-                              help="Set Maximum Altitude )field 'workout_alt_max_m') "
-                                   "in your unit (configured in Velohero). Example: '1000'")
-
-    field_parser.add_argument("-spd_avg", "--workout_spd_avg_kph",
-                              required=False,
-                              help="Set Average Speed (field 'workout_spd_avg_kph') "
-                                   "in your unit (configured in Velohero). Example: '23.4'")
-
-    field_parser.add_argument("-spd_max_kph", "--workout_spd_max_kph",
-                              required=False,
-                              help="Set Maximum Speed (field 'workout_spd_max_kph') "
-                                   "in your unit (configured in Velohero). Example: '45.6'")
-
-    field_parser.add_argument("-hr_avg_bpm", "--workout_hr_avg_bpm",
-                              required=False,
-                              help="Set Average Heart Rate (field 'workout_hr_avg_bpm'). Example: '123'")
-
-    field_parser.add_argument("-hr_max_bpm", "--workout_hr_max_bpm",
-                              required=False,
-                              help="Set Maximum Heart Rate (field 'workout_hr_max_bpm'). Example: '171'")
-
-    field_parser.add_argument("-equipment", "--equipment_ids",
-                              required=False,
-                              help="Set values for Equipments (field 'equipments_ids'). "
-                                   "Examples: '29613, 12345', ''")
-
-    field_parser.add_argument("-comment", "--workout_comment",
-                              required=False,
-                              help="Field 'workout_comment'. Example: 'Got a bonk.'")
-
-    # # ######### set #########
-    set_parser = sub_parsers.add_parser('set',
-                                        parents=[field_parser],
-                                        help="Set attributes for an existing workout")
-
-    set_parser.add_argument("-i", "--workout_id",
-                            required=True,
-                            help="Velohero workout ID. Example: '4075724'")
 
     set_parser.set_defaults(func=execute_set)
 
-    # ######### upload #########
-    upload_parser = sub_parsers.add_parser('upload',
-                                           parents=[field_parser],
-                                           help="Upload workout file to velohero")
+    # ######### show #########
+    show_parser = sub_parsers.add_parser('show', help="Show actual attributes for a loaded track file")
 
-    upload_parser.add_argument("-f", "--file",
-                               required=True,
-                               help="Name (path) to the track file to upload")
+    show_parser.add_argument("-m", "--map",
+                             required=False,
+                             action='store_true',
+                             help="Show Track in a map.")
 
-    upload_parser.set_defaults(func=execute_upload)
+
+    show_parser.set_defaults(func=execute_show)
+
+    # ######### transfer #########
+    transfer_parser = sub_parsers.add_parser('transfer', help="Upload/Update the track file with the actual setting")
+
+    transfer_parser.add_argument("-vh", "--velohero",
+                                  required=False,
+                               action='store_true',
+                               help="Upload file to Velohero and set values or, ff the Velohero Workout ID is set, "
+                                    "just update the values of the existing Workout.")
+
+    transfer_parser.add_argument("-a", "--archive",
+                                  required=False,
+                               help="Move the track file to this archive directory")
+
+    transfer_parser.set_defaults(func=execute_transfer)
+
+    # ######### velohero show #########
+    vh_show_parser = sub_parsers.add_parser('vh-show', help="Show existing workout in Velohero")
+
+    vh_show_parser.add_argument("-i", "--workout_id",
+                                required=True,
+                                help="Velohero workout ID.")
+
+    vh_show_parser.set_defaults(func=execute_velohero_show)
+
+    # shared arguments for set and upload
+    vh_field_parser = argparse.ArgumentParser(add_help=False)
+
+    vh_field_parser.add_argument("-date", "--workout_date",
+                                 required=False,
+                                 help="Set Date (field 'workout_date'). Example: '31.12.2020' or '2020-12-31")
+
+    vh_field_parser.add_argument("-time", "--workout_start_time",
+                                 required=False,
+                                 help="Set Start Time (Field 'workout_start_time'). Example: '17:59:00'")
+
+    vh_field_parser.add_argument("-dur", "--workout_dur_time",
+                                 required=False,
+                                 help="Set Duration (field 'workout_dur_time'). Example: '2:23:00'")
+
+    vh_field_parser.add_argument("-sport", "--sport_id",
+                                 required=False,
+                                 help="Set Sport (field 'sport_id'). Value can be id or description (case sensitive). "
+                                      "Examples: '1', 'Mountainbike'")
+
+    vh_field_parser.add_argument("-type", "--type_id",
+                                 required=False,
+                                 help="Set value Training type (field 'type_id'). Value can be id or description "
+                                      "(case sensitive). Examples: '7431', 'Training")
+
+    vh_field_parser.add_argument("-route", "--route_id",
+                                 required=False,
+                                 help="Set value Route (field 'route_id'). Value can be id or description "
+                                      "(case sensitive). Examples: '12345', 'Berlin Marathon")
+
+    vh_field_parser.add_argument("-dist", "--workout_dist_km",
+                                 required=False,
+                                 help="Set Distance (field 'workout_dist_km') in your unit (configured in Velohero). "
+                                      "Example: '12345'")
+
+    vh_field_parser.add_argument("-asc", "--workout_asc_m",
+                                 required=False,
+                                 help="Set Ascent (Field 'workout_asc_m') in your unit (configured in Velohero)."
+                                      " Example: '1234'")
+
+    vh_field_parser.add_argument("-dsc_m", "--workout_dsc_m",
+                                 required=False,
+                                 help="Set Descent (field 'workout_dsc_m') in your unit (configured in Velohero)."
+                                      " Example: '1234'")
+
+    vh_field_parser.add_argument("-alt_min", "--workout_alt_min_m",
+                                 required=False,
+                                 help="Set Minimum Altitude (field 'aworkout_alt_min_m')"
+                                      " in your unit (configured in Velohero). Example: '100'")
+
+    vh_field_parser.add_argument("-alt_max", "--workout_alt_max_m",
+                                 required=False,
+                                 help="Set Maximum Altitude )field 'workout_alt_max_m') "
+                                      "in your unit (configured in Velohero). Example: '1000'")
+
+    vh_field_parser.add_argument("-spd_avg", "--workout_spd_avg_kph",
+                                 required=False,
+                                 help="Set Average Speed (field 'workout_spd_avg_kph') "
+                                      "in your unit (configured in Velohero). Example: '23.4'")
+
+    vh_field_parser.add_argument("-spd_max_kph", "--workout_spd_max_kph",
+                                 required=False,
+                                 help="Set Maximum Speed (field 'workout_spd_max_kph') "
+                                      "in your unit (configured in Velohero). Example: '45.6'")
+
+    vh_field_parser.add_argument("-hr_avg_bpm", "--workout_hr_avg_bpm",
+                                 required=False,
+                                 help="Set Average Heart Rate (field 'workout_hr_avg_bpm'). Example: '123'")
+
+    vh_field_parser.add_argument("-hr_max_bpm", "--workout_hr_max_bpm",
+                                 required=False,
+                                 help="Set Maximum Heart Rate (field 'workout_hr_max_bpm'). Example: '171'")
+
+    vh_field_parser.add_argument("-equipment", "--equipment_ids",
+                                 required=False,
+                                 help="Set values for Equipments (field 'equipments_ids'). "
+                                      "Examples: '29613, 12345', ''")
+
+    vh_field_parser.add_argument("-comment", "--workout_comment",
+                                 required=False,
+                                 help="Field 'workout_comment'. Example: 'Got a bonk.'")
+
+    # # ######### velohero update #########
+    vh_update_parser = sub_parsers.add_parser('vh-update',
+                                              parents=[vh_field_parser],
+                                              help="Set attributes for an existing workout in Velohero directly"
+                                                   " (independent of a load)")
+
+    vh_update_parser.add_argument("-i", "--workout_id",
+                                  required=True,
+                                  help="Velohero workout ID. Example: '4075724'")
+    vh_update_parser.set_defaults(func=execute_velohero_update)
+
+    # ######### velohero upload #########
+    vh_upload_parser = sub_parsers.add_parser('vh-upload',
+                                              parents=[vh_field_parser],
+                                              help="Upload workout file to Velohero directly"
+                                                   " (independent of a load)")
+
+    vh_upload_parser.add_argument("-f", "--file",
+                                  required=True,
+                                  help="Name (path) to the track file to upload")
+
+    vh_upload_parser.set_defaults(func=execute_velohero_upload)
 
     args = parser.parse_args()
 
-    if len(argv) < 2:
-        exit_on_error("Use --help to show how to use {}".format(argv[0]))
+    # There must be choosen an argument
+    if len(sys.argv) == 1:
+        exit_on_error("Missing argument, see --help.")
+
+    if args.log:
+        set_log_switch(True)
 
     args.func()
 
-
-def exit_on_rc_error(message, value):
-    exit_on_error("{}: {}".format(message, value))
-
-
-def exit_on_login_error(message, file_name):
-    exit_on_error(("{}: {}\n"
-                   "Make shure you have created this file in your home directory and it has read access.\n "
-                   "Please go to https://app.velohero.com/sso and get yourself a private single sign-on key. "
-                   "That's the long string.\n"
-                   "Then create a file '{}' containing\n\n"
-                   "----- snip -------------------------------------------------------------\n"
-                   "VELOHERO_SSO_KEY=[insert your own]\n"
-                   "----- snap -------------------------------------------------------------\n"
-                   ).format(message, file_name, file_name))
-
-
-def check_sso_login():
-    log("check_sso_login", "begin")
-    global sso_id
-
-    file_name = path.join(str(pathlib_Path.home()), rc_file)
-
-    if not path.exists(file_name):
-        exit_on_login_error("File not found", file_name)
-
-    log("found file", file_name)
-    with open(file_name) as file:
-        for line in file:
-            matcher = re.match('^VELOHERO_SSO_KEY\\s*=\\s*(\\S+)\\s*', line, re.I)
-            if matcher:
-                sso_id = matcher.group(1)
-                break
-
-        if sso_id is None:
-            exit_on_rc_error("Missing key=value entry", file_name)
-
-    log("sso_id", sso_id)
-
-    r = requests.post("https://app.velohero.com/sso", data={'sso': sso_id})
-
-    # 200 Created
-    if r.status_code == 200:
-        log("Authentification successful", r.status_code)
-        return
-
-    # 403 Forbidden
-    if r.status_code == 403:
-        exit_on_error("Login forbidden - {}: ".format(r.status_code))
-        return
-
-
-def do_post_workout(file_name):
-    """
-    Send form data to an existing workout
-    """
-    log("do_post_workout", "begin")
-
-    r = requests.post("https://app.velohero.com/upload/file",
-                      headers={
-                          'user-agent': my_user_agent,
-                      },
-                      data={
-                          'sso': sso_id,
-                          'view': "json",
-                      })
-    # log("request.headers", r.request.headers)
-    # log("headers", r.headers)
-    log("text", r.text)
-
-    text = json.loads(r.text)
-    # log("id", text["id"])
-
-    # 200 Created
-    if r.status_code == 200:
-        log("Upload successful", r.status_code)
-        log("Response", str(r))
-
-        return json.loads(r.text)["id"]
-
-    # 403 Forbidden
-    if r.status_code == 403:
-        exit_on_error("Login forbidden - {}: ".format(r.status_code))
-        return False
-
-    # Other error
-    exit_on_error("HTTP error - {}: ".format(r.status_code))
-    return False
-
-
-def do_upload(file_name):
-    """
-    File must exist and of a valid route
-    Returns workout ID or False
-    """
-    log("upload file", file_name)
-
-    with open(file_name, "rb") as file:
-        # content = file.read()
-        # log("content", content)
-        r = requests.post("https://app.velohero.com/upload/file",
-                          headers={
-                              'user-agent': my_user_agent,
-                          },
-                          files={
-                              'file': (file_name, file.read()),
-                          },
-                          data={
-                              'sso': sso_id,
-                              'view': "json",
-                          })
-        # log("request.headers", r.request.headers)
-        # log("headers", r.headers)
-        log("text", r.text)
-
-        text = json.loads(r.text)
-        # log("id", text["id"])
-
-        # 200 Created
-        if r.status_code == 200:
-            log("Upload successful", r.status_code)
-            log("Response", str(r))
-
-            return json.loads(r.text)["id"]
-
-        # 403 Forbidden
-        if r.status_code == 403:
-            exit_on_error("Login forbidden - {}: ".format(r.status_code))
-            return False
-
-        # Other error
-        exit_on_error("HTTP error - {}: ".format(r.status_code))
-        return False
-
-
-def log(name, value):
-    """
-        Only switched on for development
-    """
-    if args.log:
-        print("LOG {}={}".format(name, str(value)))
-
-
-def exit_on_error(message):
-    print(message)
-    exit(1)
 
 
 if __name__ == '__main__':
