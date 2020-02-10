@@ -32,6 +32,7 @@ def execute_show():
 
 
 def execute_load():
+
     process_load(args)
 
 
@@ -74,7 +75,12 @@ def parse_args():
 
     load_parser.add_argument("-f", "--file",
                              required=False,
-                             help="Name (path) to the track file to upload")
+                             help="Name (path) to the track file to load. This parameters excludes --directory.")
+
+    load_parser.add_argument("-d", "--directory",
+                             required=False,
+                             help="Path to the directory which contains one or more track files. In alphanumerical order,"
+                                  "the first track file will be loaded. This parameters excludes --file.")
 
     load_parser.set_defaults(func=execute_load)
 
@@ -132,14 +138,15 @@ def parse_args():
     transfer_parser = sub_parsers.add_parser('transfer', help="Upload/Update the track file with the actual setting")
 
     transfer_parser.add_argument("-vh", "--velohero",
-                                  required=False,
-                               action='store_true',
-                               help="Upload file to Velohero and set values or, ff the Velohero Workout ID is set, "
-                                    "just update the values of the existing Workout.")
+                                 required=False,
+                                 action='store_true',
+                                 help="Upload file to Velohero and set values or, ff the Velohero Workout ID is set, "
+                                      "just update the values of the existing Workout.")
 
     transfer_parser.add_argument("-a", "--archive",
-                                  required=False,
-                               help="Move the track file to this archive directory")
+                                 required=False,
+                                 help="Move the track file to this archive directory. Supported placeholder is '{YYYY}'."
+                                      "Examples: '../archive' or '/home/chris/tracks/{YYYY}'")
 
     transfer_parser.set_defaults(func=execute_transfer)
 

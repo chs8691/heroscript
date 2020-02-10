@@ -100,9 +100,14 @@ class TCXParser:
 
     @property
     def pace(self):
-        """Average pace (mm:ss/km for the workout"""
+        """Average pace, formatted in mm:ss/km for the workout"""
         secs_per_km = self.duration / (self.distance / 1000)
         return time.strftime('%M:%S', time.gmtime(secs_per_km))
+
+    @property
+    def velocity_average(self):
+        """Average velocity km/h for the workout"""
+        return (self.distance / 1000.0) / (self.duration / 3600.0)
 
     @property
     def altitude_avg(self):

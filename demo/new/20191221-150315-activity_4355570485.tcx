@@ -5,7 +5,8 @@
   xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2"
   xmlns:ns2="http://www.garmin.com/xmlschemas/UserProfile/v2"
   xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns4="http://www.garmin.com/xmlschemas/ProfileExtension/v1">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:ns4="http://www.garmin.com/xmlschemas/ProfileExtension/v1">
   <Activities>
     <Activity Sport="Biking">
       <Id>2019-12-21T14:03:15.000Z</Id>

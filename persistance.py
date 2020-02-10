@@ -52,7 +52,7 @@ def __read_tcx(file_name):
     load = Stage(file_name)
 
     tcxparser = TCXParser(file_name)
-    load.set_tcx(tcxparser)
+    load.init_by_tcx(tcxparser)
 
     return load
 
@@ -63,7 +63,7 @@ class Storage():
     """
 
     def __init__(self):
-        self.dir_name = '.veloheroscript'
+        self.dir_name = '.heroscript'
         self.stage_file_name = 'stage'
         self.config_file_name = 'config'
         my_path = pathlib_Path.home().joinpath(self.dir_name)
