@@ -5,6 +5,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import time
+from datetime import datetime
+
 from lxml import objectify
 
 namespace = 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2'
@@ -54,6 +56,10 @@ class TCXParser:
 
     @property
     def started_at(self):
+        """
+        String in Z-format e.g. '2020-01-31T04:39:19.000Z'
+        :return: Original datetime as String
+        """
         return self.activity.Lap[0].attrib["StartTime"]
 
     @property

@@ -1,6 +1,12 @@
 import sys
 
-from process import process_transfer, process_set, process_load, process_show
+from cmd_config import process_config, init_config, default_port
+from cmd_masterdata import init_masterdata_storage
+from cmd_masterdata import process_masterdata
+from cmd_transfer import process_transfer
+from cmd_set import process_set
+from cmd_load import process_load
+from cmd_show import process_show
 from velohero import velohero_process_show, velohero_process_update, velohero_process_upload
 from utility import set_log_switch, exit_on_error
 
@@ -12,7 +18,7 @@ def execute_velohero_upload():
 
 
 def execute_velohero_update():
-   velohero_process_update(args)
+    velohero_process_update(args)
 
 
 def execute_velohero_show():
@@ -27,12 +33,19 @@ def execute_set():
     process_set(args)
 
 
+def execute_config():
+    process_config(args)
+
+
+def execute_masterdata():
+    process_masterdata(args)
+
+
 def execute_show():
     process_show(args)
 
 
 def execute_load():
-
     process_load(args)
 
 
@@ -70,12 +83,81 @@ def parse_args():
 
     sub_parsers = parser.add_subparsers()
 
+    # ######### masterdata #########
+    data_parser = sub_parsers.add_parser('masterdata', help="Set and show master data like equipment and training type.")
+
+    data_parser.add_argument("-l", "--list",
+                             required=False,
+                             action='store_true',
+                             help="Print all master data as a list. This is the default argument.")
+
+    data_parser.add_argument("-r", "--refresh",
+                             required=False,
+                             action='store_true',
+                             help="Update all master data from Velohero (equipments and training types). "
+                                  "A EQUIPMENT is compared by name: A equipment will only added to the master data, if"
+                                  "it is found in Velohero and STRAVA, all other equipments will be ignored. "
+                                  "The name in Velohero must be a substring in STRAVA's name, but spaces and case will be ignored."
+                                  "A TYPE is configured by the user in Velohero (Training Type). There is a type specific"
+                                  "behavior: A type named 'Competition/Wettkampf' will be used to set the Competition flag in STRAVA,"
+                                  "same for 'Commute/Pendel' and 'Indoor/Rolle'. 'Training' is the standard type and has not specific behavior."
+                                  "All other types will be used to tag STRAVA's activity name.")
+
+    data_parser.add_argument("-v", "--validate",
+                             required=False,
+                             action='store_true',
+                             help="Check, if master data are actual.")
+
+    data_parser.set_defaults(func=execute_masterdata)
+
+    # ######### config #########
+    config_parser = sub_parsers.add_parser('config', help="Set and show script settings.")
+
+    config_parser.add_argument("-l", "--list",
+                               action='store_true',
+                               help="Print all settings as a list")
+
+    # For every new argument added here, cmd_config.py must be enhanced:
+    #    - Define a constant key_....
+    #    - Enhance _set_argument()
+    #    - If argument has a default value, update _init_config
+
+    config_parser.add_argument("-sc", "--strava_client_id",
+                               required=False,
+                               help="Set the STRAVA client ID for the used API. This can be found in STAVA / Settings / My API. "
+                                    "If you havn't got alreay a created an API, you have to to this first."
+                                    "Example: --velohero_sso_id kdRfmIHT6IVH1GI9SD32BIhaUpwTaQguuzE7XYt4 ")
+
+    config_parser.add_argument("-sr", "--strava_reset",
+                               required=False,
+                               action='store_true',
+                               help="Unset STRAVA access ids. "
+                                    "Useful, if there is trouble with the authentication process.")
+
+    config_parser.add_argument("-vs", "--velohero_sso_id",
+                               required=False,
+                               help="Set the velohero SSO key. "
+                                    "Example: --velohero_sso_id kdRfmIHT6IVH1GI9SD32BIhaUpwTaQguuzE7XYt4 ")
+
+    config_parser.add_argument("-p", "--port",
+                               required=False,
+                               help="Port for internal webserver, default is {}. Example: --port 1234"
+                               .format(default_port))
+
+    config_parser.set_defaults(func=execute_config)
+
     # ######### load #########
     load_parser = sub_parsers.add_parser('load', help="Load a track file")
 
     load_parser.add_argument("-f", "--file",
                              required=False,
                              help="Name (path) to the track file to load. This parameters excludes --directory.")
+
+    load_parser.add_argument("-s", "--strava",
+                             required=False,
+                             action='store_true',
+                             help="If set, activity values will be loaded from Strava. This is only useful, "
+                                  "if the activity already exists in STRAVA")
 
     load_parser.add_argument("-d", "--directory",
                              required=False,
@@ -99,16 +181,16 @@ def parse_args():
                                  "Examples: 'Pendel', 'Training' or  ''")
 
     set_parser.add_argument("-r", "--route_name",
-                                 required=False,
-                                 help="Set value for the route by its name. Unset with ''. "
-                                      "The name must match (case insensitive) the route name exactly or a unique substring of it. "
-                                      "Examples: 'Goldbach Wintercross 10 KM', 'goldbach', '")
+                            required=False,
+                            help="Set value for the route by its name. Unset with ''. "
+                                 "The name must match (case insensitive) the route name exactly or a unique substring of it. "
+                                 "Examples: 'Goldbach Wintercross 10 KM', 'goldbach', '")
 
     set_parser.add_argument("-e", "--equipment_names",
-                                 required=False,
-                                 help="Set values for Equipments by its names, delimeted by a comma (','). Unset with ''. "
-                                      "The name must match (case insensitive) the material name exactly or a unique substring of it. "
-                                      "Examples: 'Laufschuhe Saucony Ride ISO, MTB Focus', ''")
+                            required=False,
+                            help="Set values for Equipments by its names, delimeted by a comma (','). Unset with ''. "
+                                 "The name must match (case insensitive) the material name exactly or a unique substring of it. "
+                                 "Examples: 'Laufschuhe Saucony Ride ISO, MTB Focus', ''")
 
     set_parser.add_argument("-c", "--comment",
                             required=False,
@@ -116,10 +198,9 @@ def parse_args():
                                  "Examples: 'Wonderful weather', or  ''")
 
     set_parser.add_argument("-v", "--velohero_workout_id",
-                                required=False,
-                                help="Velohero workout ID. If set, the upload command only udpates the existing workout "
-                                     "in Velohero. Set ID to '0' to force an upload. Examples: '4124109' or '0'")
-
+                            required=False,
+                            help="Velohero workout ID. If set, the upload command only udpates the existing workout "
+                                 "in Velohero. Set ID to '0' to force an upload. Examples: '4124109' or '0'")
 
     set_parser.set_defaults(func=execute_set)
 
@@ -131,17 +212,21 @@ def parse_args():
                              action='store_true',
                              help="Show Track in a map.")
 
-
     show_parser.set_defaults(func=execute_show)
 
     # ######### transfer #########
     transfer_parser = sub_parsers.add_parser('transfer', help="Upload/Update the track file with the actual setting")
 
-    transfer_parser.add_argument("-vh", "--velohero",
+    transfer_parser.add_argument("-v", "--velohero",
                                  required=False,
                                  action='store_true',
                                  help="Upload file to Velohero and set values or, ff the Velohero Workout ID is set, "
                                       "just update the values of the existing Workout.")
+
+    transfer_parser.add_argument("-s", "--strava",
+                                 required=False,
+                                 action='store_true',
+                                 help="Update STRAVA activity. The activity must exist in STRAVA and loaded with 'load --strava'")
 
     transfer_parser.add_argument("-a", "--archive",
                                  required=False,
@@ -276,6 +361,7 @@ def parse_args():
     args.func()
 
 
-
 if __name__ == '__main__':
+    init_config()
+    init_masterdata_storage()
     parse_args()

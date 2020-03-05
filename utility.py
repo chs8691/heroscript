@@ -1,9 +1,7 @@
 import datetime
 import re
-from os import path
 
 log_switch = False
-
 
 def set_log_switch(value):
     global log_switch
@@ -23,19 +21,6 @@ def log(name, value):
 
 def exit_on_rc_error(message, value):
     exit_on_error("{}: {}".format(message, value))
-
-
-def exit_on_login_error(message, file_name):
-    exit_on_error(("{}: {}\n"
-                   "Make shure you have created this file in your home directory and it has read access.\n "
-                   "Please go to https://app.velohero.com/sso and get yourself a private single sign-on key. "
-                   "That's the long string.\n"
-                   "Then create a file '{}' containing\n\n"
-                   "----- snip -------------------------------------------------------------\n"
-                   "VELOHERO_SSO_KEY=[insert your own]\n"
-                   "----- snap -------------------------------------------------------------\n"
-                   ).format(message, file_name, file_name))
-
 
 def exit_on_error(message):
     print(message)
@@ -71,3 +56,45 @@ def resolve_path(directory, time):
         ret = ret.replace("{YYYY}", time[0:4])
 
     return ret
+
+
+def is_indoor_training_type(training_type):
+    """
+    Checks if the (valid) training type is indoor (trainer, Rolle). Change this logic for your specific Velohero
+    training types. There should only be one traning type for indoor trainer.
+    :param training_type: String with type
+    :return: true, if type is a indoor type, otherwise false
+    """
+    return training_type.lower() == 'rolle' or training_type.lower() == 'indoor' or training_type.lower() == 'trainer'
+
+
+def is_commute_training_type(training_type):
+    """
+    Checks if the (valid) training type is a commute one (Commute, Pendel). Change this logic for your specific Velohero
+    training types. There should only be one traning type for commutes.
+    :param training_type: String with type
+    :return: true, if type is the commute type, otherwise false
+    """
+    return training_type.lower() == 'pendel' or training_type.lower() == 'commute'
+
+
+def is_competition_training_type(training_type):
+    """
+    Checks if the (valid) training type is a competition one (Commute, Pendel). Change this logic for your specific Velohero
+    training types. There should only be one traning type for competitions.
+    :param training_type: String with type
+    :return: true, if type is the competition type, otherwise false
+    """
+    return training_type.lower() == 'wettkampf' or training_type.lower() == 'competition'
+
+
+def is_default_training_type(training_type):
+    """
+    Checks if the (valid) training type is the default one. Change this logic for your specific Velohero
+    training types. The default type has no special behavior and the STRAVA activity name will not be tagged.
+    There should only be one traning type defined as default.
+    :param training_type: String with type
+    :return: true, if type is the default type, otherwise false
+    """
+    return training_type.lower() == 'training'
+

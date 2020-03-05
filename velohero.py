@@ -1,4 +1,6 @@
-from utility import log, exit_on_rc_error, exit_on_error, exit_on_login_error
+import cmd_config
+from cmd_config import read_config
+from utility import log, exit_on_rc_error, exit_on_error
 from pathlib import Path as pathlib_Path
 from os import path
 import requests as requests
@@ -10,8 +12,8 @@ from lxml import html
 # Filled with ID for SSO login
 sso_id = None
 
-# Constant with file name in the users directory
-rc_file = ".veloherorc"
+# # Constant with file name in the users directory
+# rc_file = ".veloherorc"
 
 # User-Agent string
 my_user_agent = "veloheroup/1.0"
@@ -42,6 +44,25 @@ def velohero_process_update(args):
     print("Done.")
 
     log("execute_vh_update", "end")
+
+
+def velohero_process_get_data():
+    """
+    Fetch all training typres from velohero
+    :return: Dictionary with 'types': List with dict e.g. [{'id'=12345, 'name'='Wettkampf'}, ...]
+    """
+    # log("velohero_process_get_data", "start")
+
+    velohero_check_sso_login()
+
+    ret = dict(
+        types=get_href_master_data(load_training_types(), 'types'),
+        equipments=get_href_master_data(load_equipments(), 'equipment')
+    )
+
+    log("Got data.py from Velohero", ret)
+
+    return ret
 
 
 def velohero_process_show(args):
@@ -104,6 +125,58 @@ def load_workout_data(workload_id):
     return html.fromstring(r.text)
 
 
+def load_training_types():
+    """
+    Requests the settings for the given user. Precondition: SSO established
+    Returns HTML tree
+    """
+    log("load_training_types", "start")
+
+    # just for for testing
+    return html.parse(open('velo_hero_training_types.html', 'rt')).getroot()
+
+    # url = "https://app.velohero.com/types/list"
+    # log("url", str(url))
+    # r = requests.post(url,
+    #                   headers={
+    #                       'user-agent': my_user_agent,
+    #                   },
+    #                   data.py={
+    #                       'sso': sso_id,
+    #                   })
+    #
+    # if r.status_code != 200:
+    #     exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
+    #
+    # return html.fromstring(r.text)
+
+def load_equipments():
+    """
+    Requests the settings for the given user. Precondition: SSO established
+    Returns HTML tree
+    """
+    log("load_equipments", "start")
+
+    # just for for testing
+    return html.parse(open('velo_hero_equipments.html', 'rt')).getroot()
+
+    # url = "https://app.velohero.com/types/list"
+    # log("url", str(url))
+    # r = requests.post(url,
+    #                   headers={
+    #                       'user-agent': my_user_agent,
+    #                   },
+    #                   data.py={
+    #                       'sso': sso_id,
+    #                   })
+    #
+    # if r.status_code != 200:
+    #     exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
+    #
+    # return html.fromstring(r.text)
+
+
+
 def get_select_values_value(tree, name):
     """
     Returns only the value of a select field
@@ -131,13 +204,33 @@ def get_select_values_values(tree, name):
     return ret
 
 
+def get_href_master_data(tree, keyword):
+    """
+    Search all hrefs like <a href="https://app.velohero.com/types/edit/75109">Etappe</a>
+    :param tee: HTML tree of app.velohero.com/types/list
+    :return: List with dictionary items 'id' and 'name'
+    """
+    ret =[]
+
+    pattern = f".*/{keyword}/edit/(\d+)"
+
+    reg = re.compile(pattern)
+
+    for v in [v for v in tree.xpath("//a") if reg.match(v.attrib['href'])]:
+        id = re.search(pattern, v.attrib['href']).group(1)
+        name = v.text_content().strip()
+        ret.append(dict(velohero_id=id, name=name))
+
+    return ret
+
+
 def get_select_values(tree, name):
     """
     Returns dictionary with id, value, description, for instance
             dict=(id='sport_id',
                   description='Sportart',
-                  values=[(id=1, description='Radsport', data-subtext=None, selectecd=True),
-                        id=6, description='Mountainbike', data-subtext=None, selected=False),
+                  values=[(id=1, description='Radsport', data.py-subtext=None, selectecd=True),
+                        id=6, description='Mountainbike', data.py-subtext=None, selected=False),
                         ...
                       ]),
 
@@ -170,8 +263,8 @@ def get_select_values(tree, name):
             else:
                 # log('selected', "False")
                 selected = False
-            if option.get('data-subtext'):
-                data_subtext = option.get('data-subtext')
+            if option.get('data.py-subtext'):
+                data_subtext = option.get('data.py-subtext')
             else:
                 data_subtext = None
 
@@ -217,6 +310,34 @@ def get_text_area(tree, name):
         exit_on_rc_error("Element not found", name)
 
 
+def get_settings_table_items(tree, name):
+    """
+    Returns dictionary with id, value
+    """
+    # log('get_simple_input', str(name))
+    try:
+
+        label = tree.xpath("//label[@for='%s']" % name)[0].text
+        # label inside formatting element, e.g. <span>
+        if label is None:
+            label = tree.xpath("//label[@for='%s']" % name)[0][0].text
+
+        # log('label', label)
+
+        element = tree.xpath("//input[@id='%s']" % name)[0]
+
+        # log('element', element)
+
+        ret = dict(id=element.name,
+                   value=element.value,
+                   )
+        # log("get_simple_input ret=", ret)
+        return ret
+
+    except IndexError:
+        exit_on_rc_error("Element not found", name)
+
+
 def get_simple_input(tree, name):
     """
     Returns dictionary with id, value, description
@@ -249,7 +370,7 @@ def get_simple_input(tree, name):
 def get_selected_id(select_dict, value):
     """
     Exits script, if value is invalid. Exits in error case
-    :param select_dict: Dictionary which describes the data
+    :param select_dict: Dictionary which describes the data.py
     :param value: id or description
     :return: id or, in initial case, empty string
     """
@@ -278,9 +399,9 @@ def get_selected_id(select_dict, value):
 def get_selected_ids(select_dict, values=None, value_list=None):
     """
     Exits script, if value is invalid
-    :param select_dict: Dictionary which describes the data
+    :param select_dict: Dictionary which describes the data.py
     :param values: String with list with ids or descriptions, e.g. "", "123, 345, 56756"
-    :param value_list: Alternative to values, the data directly as list
+    :param value_list: Alternative to values, the data.py directly as list
     :return: List with ids or, in initial case, empty list
     """
 
@@ -422,7 +543,7 @@ def velohero_do_update(workout_id, args, load):
 
     tree = load_workout_data(workout_id)
 
-    # Init all field with old data
+    # Init all field with old data.py
     workout_date = get_simple_input(tree, 'workout_date')['value']
     workout_start_time = get_simple_input(tree, 'workout_start_time')['value']
     workout_dist_km = get_simple_input(tree, 'workout_dist_km')['value']
@@ -441,7 +562,7 @@ def velohero_do_update(workout_id, args, load):
     workout_comment = get_text_area(tree, 'workout_comment')['value']
     equipment_ids = get_select_values_values(tree, 'equipment_ids')
 
-    log('Actual data', ":")
+    log('Actual data.py', ":")
     log('workout_date', workout_date)
     log('workout_start_time', workout_start_time)
     log('workout_dist_km', workout_dist_km)
@@ -533,7 +654,7 @@ def velohero_do_update(workout_id, args, load):
         if load.comment is not None:
             workout_comment = load.comment
 
-    log('New data', ":")
+    log('New data.py', ":")
     log('workout_date', workout_date)
     log('workout_start_time', workout_start_time)
     log('workout_dist_km', workout_dist_km)
@@ -595,25 +716,17 @@ def velohero_check_sso_login():
     log("check_sso_login", "begin")
     global sso_id
 
-    file_name = path.join(str(pathlib_Path.home()), rc_file)
-
-    if not path.exists(file_name):
-        exit_on_login_error("File not found", file_name)
-
-    log("found file", file_name)
-    with open(file_name) as file:
-        for line in file:
-            matcher = re.match('^VELOHERO_SSO_KEY\\s*=\\s*(\\S+)\\s*', line, re.I)
-            if matcher:
-                sso_id = matcher.group(1)
-                break
-
-        if sso_id is None:
-            exit_on_rc_error("Missing key=value entry", file_name)
+    sso_id = cmd_config.get_config(cmd_config.key_velohero_sso_id)
 
     log("sso_id", sso_id)
 
-    r = requests.post("https://app.velohero.com/sso", data={'sso': sso_id})
+    if sso_id is None:
+        exit_on_error("Missing SSO Key. Use 'config --velohero_sso_id YOUR_KEY' to set the key once.")
+
+    try:
+        r = requests.post("https://app.velohero.com/sso", data={'sso': sso_id})
+    except ConnectionError as e:
+        exit_on_error("Velohero SSO failed: {}".format(e.strerror))
 
     # 200 Created
     if r.status_code == 200:
