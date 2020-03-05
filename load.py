@@ -28,6 +28,9 @@ class Stage:
         self.route_name = None
 
         # Free text
+        self.description = None
+
+        # Free text
         self.comment = None
 
         # Materials must match with their name
@@ -94,7 +97,7 @@ class Stage:
         self.distance = tcxparser.distance
         self.hr_average = tcxparser.hr_avg
 
-    def add_strava(self, id, name, type):
+    def add_strava(self, id, name, type, description):
         """
         Add STRAVA data.py.
         :param id: STRAVA Activity ID as int
@@ -104,6 +107,7 @@ class Stage:
         self.strava_activity_id = id
         self.strava_activity_name = name
         self.training_type = type
+        self.description = description
 
 
     def distance_unit_abbreviation(self):
@@ -125,6 +129,14 @@ class Stage:
 
     def set_route_name(self, value):
         self.route_name = value
+
+    def set_description(self, value):
+        self.description = value
+        if len(self.strava_activity_name.split(": ", 1)) == 2:
+            pre = self.strava_activity_name.split(": ", 1)[0]
+            self.strava_activity_name = f"{pre}: {value}"
+        else:
+            self.strava_activity_name = value
 
     def set_comment(self, value):
         self.comment = value

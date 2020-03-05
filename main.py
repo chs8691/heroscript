@@ -156,8 +156,10 @@ def parse_args():
     load_parser.add_argument("-s", "--strava",
                              required=False,
                              action='store_true',
-                             help="If set, activity values will be loaded from Strava. This is only useful, "
-                                  "if the activity already exists in STRAVA")
+                             help="If set, values will be loaded from the existing Strava activity (matching by start "
+                                  "tinme): ID and name. The training type will be defined by the flags for commute and "
+                                  "trainer (indoor), the setting of the workout type to 'Competition' or the prefix in "
+                                  " name (separated by a colon ':'). ")
 
     load_parser.add_argument("-d", "--directory",
                              required=False,
@@ -172,19 +174,27 @@ def parse_args():
     set_parser.add_argument("-a", "--activity_type",
                             required=False,
                             choices=['run', 'mtb', 'roadbike', 'fitness', 'hiking'],
-                            help="Set the activity type to Running, Mountain Biking, Road Cycling, Fitness or Hiking")
+                            help="Set the activity type to Running, Mountain Biking, Road Cycling, Fitness or Hiking. "
+                                 "Will be used to set the workout type in Velohero.")
 
     set_parser.add_argument("-t", "--training_type",
                             required=False,
                             help="Set the training type by its name (unset with ''). "
-                                 "The name must exactly match the defined one in Velohero. "
-                                 "Examples: 'Pendel', 'Training' or  ''")
+                                 "The input must match exactly one master data item "
+                                 "(which must be created with 'masterdata --refresh'). Heroscript is expecting, that"
+                                 "there are training types for competition ('Competition' or 'Wettkampf'), Commute "
+                                 "('Commute' or 'Pendel'), Indoor Cycling ('Indoor', 'Trainer' or 'Rolle') and "
+                                 "'Training' as the default type. And there can be additional types, too. This types"
+                                 "must be defined in Velohero and downloaded with 'masterdata --refresh'. If you need"
+                                 "other training types, you have to fork the scripting for you."
+                                 "Examples: 'Pendel', 'Training' or  '', but also 'pendel' or 'p'")
 
     set_parser.add_argument("-r", "--route_name",
                             required=False,
                             help="Set value for the route by its name. Unset with ''. "
                                  "The name must match (case insensitive) the route name exactly or a unique substring of it. "
-                                 "Examples: 'Goldbach Wintercross 10 KM', 'goldbach', '")
+                                 "Will be used to update Velohero, not used for STRAVA. "
+                                 "Examples: 'Goldbach Wintercross 10 KM', 'goldbach', ' ")
 
     set_parser.add_argument("-e", "--equipment_names",
                             required=False,
@@ -192,9 +202,15 @@ def parse_args():
                                  "The name must match (case insensitive) the material name exactly or a unique substring of it. "
                                  "Examples: 'Laufschuhe Saucony Ride ISO, MTB Focus', ''")
 
+    set_parser.add_argument("-d", "--description",
+                            required=False,
+                            help="Set the activity description (unset with '').  In Velhero this will be saved as "
+                                 "comment, in Strava this will be part of the name. "
+                                 "Examples: 'Wonderful weather tour', or  'Day 1 of 5'")
+
     set_parser.add_argument("-c", "--comment",
                             required=False,
-                            help="Set the comment (unset with ''). "
+                            help="Set the comment (unset with '') in Velhero and overwrites the name in STRAVA"
                                  "Examples: 'Wonderful weather', or  ''")
 
     set_parser.add_argument("-v", "--velohero_workout_id",

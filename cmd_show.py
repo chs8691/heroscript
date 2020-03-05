@@ -132,6 +132,8 @@ def process_show(args):
 
     print('Equipment Names        : %s' % load.equipment_names)
 
+    print("Description            : '%s'" % load.description)
+
     print("Comment                : '%s'" % load.comment)
     print("")
 

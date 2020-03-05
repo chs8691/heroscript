@@ -120,6 +120,11 @@ def load_strava_activity():
                 f"name='{a.name}' ID", f"'{a.id}', commute={a.commute}, trainer={a.trainer}, "
                                        f"workout type={a.workout_type}")
 
+            if len(a.name.split(": ", 1)) == 2:
+                description = a.name.split(": ", 1)[1]
+            else:
+                description = a.name
+
             if a.commute:
                 type = masterdata.get_commute_type()
 
@@ -140,7 +145,7 @@ def load_strava_activity():
                 type = masterdata.get_default_type()
 
             log("Detected STRAVA activity type",type['name'])
-            load.add_strava(a.id, a.name, type['name'])
+            load.add_strava(a.id, a.name, type['name'], description)
             save_load(load)
             return
 
