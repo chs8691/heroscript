@@ -1,13 +1,11 @@
-import cmd_config
-from cmd_config import read_config
-from utility import log, exit_on_rc_error, exit_on_error
-from pathlib import Path as pathlib_Path
-from os import path
-import requests as requests
-import re
 import json
+import re
+
+import requests as requests
 from lxml import html
 
+import cmd_config
+from utility import log, exit_on_rc_error, exit_on_error
 
 # Filled with ID for SSO login
 sso_id = None
@@ -46,21 +44,20 @@ def velohero_process_update(args):
     log("execute_vh_update", "end")
 
 
-def velohero_process_get_data():
+def velohero_process_get_masterdata():
     """
     Fetch all training typres from velohero
     :return: Dictionary with 'types': List with dict e.g. [{'id'=12345, 'name'='Wettkampf'}, ...]
     """
     # log("velohero_process_get_data", "start")
 
-    velohero_check_sso_login()
+    # velohero_check_sso_login()
 
     ret = dict(
         types=get_href_master_data(load_training_types(), 'types'),
-        equipments=get_href_master_data(load_equipments(), 'equipment')
+        equipments=get_href_equipments(load_equipments())
     )
-
-    log("Got data.py from Velohero", ret)
+    log("Got master data from Velohero", ret)
 
     return ret
 
@@ -150,6 +147,7 @@ def load_training_types():
     #
     # return html.fromstring(r.text)
 
+
 def load_equipments():
     """
     Requests the settings for the given user. Precondition: SSO established
@@ -174,7 +172,6 @@ def load_equipments():
     #     exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
     #
     # return html.fromstring(r.text)
-
 
 
 def get_select_values_value(tree, name):
@@ -210,7 +207,7 @@ def get_href_master_data(tree, keyword):
     :param tee: HTML tree of app.velohero.com/types/list
     :return: List with dictionary items 'id' and 'name'
     """
-    ret =[]
+    ret = []
 
     pattern = f".*/{keyword}/edit/(\d+)"
 
@@ -221,6 +218,29 @@ def get_href_master_data(tree, keyword):
         name = v.text_content().strip()
         ret.append(dict(velohero_id=id, name=name))
 
+    return ret
+
+
+def get_href_equipments(tree):
+    """
+    Search all equipments as hrefs like <a href="https://app.velohero.com/types/edit/75109">Etappe</a>
+    :param tee: HTML tree of app.velohero.com/types/list
+    :return: List with dictionary items 'id' and 'name'
+    """
+    ret = []
+
+    regex = re.compile(".*/equipment/edit/(\d+)")
+
+    i = 0
+    root = tree.xpath("//table[@class='table table-hover']/tbody/tr")
+    for e in root:
+        if e.xpath("td")[0].xpath("span/i")[0].xpath("@title='Currently in use'"):
+            ret.append(dict(
+                velohero_id=regex.match(e.xpath('td')[2].xpath("a")[0].attrib['href']).group(1).strip(),
+                name=e.xpath('td')[2].xpath("a/text()")[0].strip()))
+        i += 1
+
+    # log("Used equipments",ret)
     return ret
 
 
@@ -527,7 +547,6 @@ def map_sport_id(sport_id_dict, activity):
         return None
 
     return result[0]['id']
-
 
 
 def velohero_do_update(workout_id, args, load):

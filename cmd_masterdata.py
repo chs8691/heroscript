@@ -116,8 +116,8 @@ def _tag_types(types):
 def _do_refresh():
     log("_refresh_data", "started")
 
-    velohero_dict = velohero.velohero_process_get_data()
-    strava_dicts = strava.strava_process_get_data()
+    velohero_dict = velohero.velohero_process_get_masterdata()
+    strava_dicts = strava.strava_process_get_masterdata()
 
     equipments = _merge_equipments(velohero_dict['equipments'], strava_dicts)
     # types = _tag_types(velohero_dict['types'])

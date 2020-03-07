@@ -3,6 +3,7 @@ import re
 import utility
 from cmd_masterdata import find_training_type_by_name, read_masterdata
 from load import read_load, save_load
+from masterdata import find_equipment_by_name
 from utility import log, exit_on_error
 
 
@@ -69,7 +70,6 @@ def process_set(args):
         log("args.training_type", args.training_type)
         _set_training_type(load, find_training_type_by_name(args.training_type.strip().lower()))
 
-
     if args.route_name is not None:
         log("args.route_name", args.route_name)
         load.set_route_name(args.route_name.strip().lower())
@@ -77,12 +77,15 @@ def process_set(args):
     if args.equipment_names is not None:
         log("args.equipment_names", args.equipment_names)
 
+        equipment_names = []
         if len(args.equipment_names.strip()) == 0:
             equipment_names = []
+
         elif args.equipment_names.find(",") > 0:
-            equipment_names = [e.strip().lower() for e in args.equipment_names.split(',')]
+            for equipment in args.equipment_names.split(','):
+                equipment_names.append(find_equipment_by_name(equipment.strip())['name'])
         else:
-            equipment_names = [args.equipment_names.strip().lower()]
+            equipment_names = find_equipment_by_name([args.equipment_names.strip().lower()][0])['name']
 
         log("equipment_names", equipment_names)
         load.set_equipment_names(equipment_names)

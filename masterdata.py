@@ -3,10 +3,11 @@ Master Data. Are stored as dictionary:
 
 """
 import pickle
+import re
 
 from storage import Storage
 from utility import exit_on_error, is_commute_training_type, is_indoor_training_type, is_competition_training_type, \
-    is_default_training_type
+    is_default_training_type, log
 
 
 def read_masterdata():
@@ -57,7 +58,7 @@ def get_indoor_type():
 
 def find_type_by_name(name):
     """
-    Checks, if the name matchs a type an returns it.
+    Checks, if the name does match a type and returns it.
     :param name: String with the name to parse
     :return: Matching type or, if not found, default type
     """
@@ -65,6 +66,29 @@ def find_type_by_name(name):
         return type
 
     return get_default_type()
+
+
+def find_equipment_by_name(name):
+    """
+    Query for a equipment. Exit script with message, if it doesn't match exactly one item.
+    :param name: String with name or a Substring
+    :return: masterdata item (dictionary)
+    :except exit, if not found
+    """
+    hits = []
+    # log("find_equipment_by_name", read_masterdata()['equipments'])
+    # log("name", name)
+    regex = re.compile("^" + name + ".*", re.IGNORECASE)
+    for equipment in [ e for e in read_masterdata()['equipments'] if regex.match( e['name']) ]:
+        hits.append(equipment)
+
+    if len(hits) == 0:
+        exit_on_error(f"No Equipment found for '{name}' (use 'masterdata --list/--refresh')")
+
+    if len(hits) > 1:
+        exit_on_error(f"'{name}' not unique: Found {hits}")
+
+    return hits[0]
 
 
 def get_competition_type():

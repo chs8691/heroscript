@@ -26,6 +26,7 @@ threaded_authorize_code = None
 strava_workout_run_competition_type = "1"
 strava_workout_bicycle_competition_type = "11"
 
+
 class MyRequestHandler(BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, server):
@@ -188,7 +189,7 @@ def strava_do_update():
             "will be askt for app authorization.")
 
 
-def strava_process_get_data():
+def strava_process_get_masterdata():
     """
     Load master data.py from strava
     :returns: List with dictionary of keys id, name, type. Type can have tow values 'shoe' or 'bike'
