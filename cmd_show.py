@@ -7,12 +7,12 @@ from os import path
 from load import read_load
 from tcxparser import TCXParser
 
-from utility import log, get_human_date
+import utility
 
 
 def show_map():
     p = path.join(tempfile.gettempdir(), "heroscript_map.html")
-    log("Temp html", p)
+    utility.log("Temp html", p)
     with open(p, "w") as file:
         file.write(Map().get())
         # print("See your default browser.".format(p))
@@ -24,8 +24,8 @@ class Map(object):
         self._load = read_load()
 
         self._points = self.get_track_points()
-        log("Map imported track points", len(self._points))
-        self._title = get_human_date(self._load.started_at, "%y-%m-%d %H:%M")
+        utility.log("Map imported track points", len(self._points))
+        self._title = utility.get_human_date(self._load.started_at, "%y-%m-%d %H:%M")
 
         self._max_lon = None
         self._min_lon = None
@@ -41,21 +41,21 @@ class Map(object):
             self._max_lon = lon
         if self._min_lon is None or (lon < self._min_lon):
             self._min_lon = lon
-        # log("extremas={}, {}, {}, {}".format(self._min_lon, self._max_lon, self._min_lat, self._max_lat))
+        # utility.log("extremas={}, {}, {}, {}".format(self._min_lon, self._max_lon, self._min_lat, self._max_lat))
 
     def get_center(self):
         """
         Returns always a coordinate
         :return: String with center or default center as (lon, lat)
         """
-        # log("extremas", "{}, {}, {}, {}".format(self._min_lon, self._max_lon, self._min_lat, self._max_lat))
+        # utility.log("extremas", "{}, {}, {}, {}".format(self._min_lon, self._max_lon, self._min_lat, self._max_lat))
         if self._max_lat is None or self._max_lon is None or self._min_lat is None or self._min_lon is None:
             ret = "[50.1, 7.1]"
         else:
             ret = "[{}, {}]".format(self._min_lat + (self._max_lat - self._min_lat) / 2.0,
                                     self._min_lon + (self._max_lon - self._min_lon) / 2.0)
 
-        log("Center", ret)
+        utility.log("Center", ret)
         return ret
 
     def get_track_points(self):
@@ -64,7 +64,7 @@ class Map(object):
         :return: tuple list with (lat, lon), can be empty
         """
         with open(self._load.file_name, "r") as file:
-            log("parsing file", self._load.file_name)
+            utility.log("parsing file", self._load.file_name)
             return TCXParser(self._load.file_name).position_values()
 
     def build_coordinates(self):
@@ -77,13 +77,13 @@ class Map(object):
         for (lat, lon) in self._points:
             p = "[{}, {}]".format(lon, lat)
             point_strings.append(p)
-            # log("p", p)
+            # utility.log("p", p)
             self.update_center(lon, lat)
 
         ret = ", ".join(point_strings)
-        # log("point_strings={}".format(point_strings))
+        # utility.log("point_strings={}".format(point_strings))
         ret = "[{}]".format(ret)
-        # log("ret={}".format(ret))
+        # utility.log("ret={}".format(ret))
 
         return ret
 
@@ -100,7 +100,7 @@ class Map(object):
 
 
 def process_show(args):
-    log("process_show", "start")
+    utility.log("process_show", "start")
 
     load = read_load()
 
@@ -121,7 +121,8 @@ def process_show(args):
     print('--- ATTRIBUTES ---')
 
     if load.new_activity_type is None:
-        print('Activity Type          : %s' % load.original_activity_type)
+        print(f"Activity Type          : ({load.original_activity_type})  "
+              f"<=== Use set --activity_type {utility.activity_type_list}")
     else:
         print('Activity Type          : %s (original: %s)' %
               (load.new_activity_type, load.original_activity_type))
@@ -132,12 +133,12 @@ def process_show(args):
 
     print('Equipment Names        : %s' % load.equipment_names)
 
-    print("Description            : '%s'" % load.description)
+    print(f"Name                   : '{load.title}'")
 
     print("Comment                : '%s'" % load.comment)
     print("")
 
-    print("Started at (GMT)       : {}".format(get_human_date(load.started_at, "%a %y-%m-%d %H:%M")))
+    print("Started at (GMT)       : {}".format(utility.get_human_date(load.started_at, "%a %y-%m-%d %H:%M")))
 
     print("Distance               : {0:.1f} k{1}".format(load.distance/1000, load.distance_unit_abbreviation()))
 
@@ -153,9 +154,16 @@ def process_show(args):
     print(f'Activity ID            : {load.strava_activity_id}')
     print(f'Activity Name          : {load.strava_activity_name}')
 
+    if(load.strava_descriptions is None):
+        print('Description (generated): None')
+    else:
+        print(f'Description (generated):')
+        for description in load.strava_descriptions:
+            print(f'    {description}')
+
     print('--- STATUS ---')
     print('Velohero Workout ID    : %s' % load.velohero_workout_id)
 
     print("Archived to            : {}".format(load.archived_to))
 
-    log("process_show", "end")
+    utility.log("process_show", "end")

@@ -1,6 +1,8 @@
 import glob
 from os import path
 
+import config
+from config import read_config
 from load import create_load
 from strava import load_strava_activity
 from utility import log, exit_on_error
@@ -14,8 +16,14 @@ def process_load(args):
 
     elif args.directory:
         create_load(get_next_track_file(args.directory))
+
     else:
-        exit_on_error("Invalid arguments: Use either '--file' or '--directory'.")
+        dir = config.find(config.key_load_dir)
+        if dir is None:
+            exit_on_error("No load directory configured. Use 'heroscript config --load_directory PATH' or use "
+                          "an optional argument '--file FILE' or '--directory DIRECTORY'.")
+        else:
+            create_load(get_next_track_file(dir))
 
     if args.strava:
         load_strava_activity()

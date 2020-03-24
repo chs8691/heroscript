@@ -9,7 +9,9 @@ from urllib.parse import urlparse, parse_qs
 
 import stravalib
 
-from cmd_config import key_port, key_strava_client_id, key_strava_client_secret, save_item, \
+import config
+import utility
+from config import key_port, key_strava_client_id, key_strava_client_secret, save_item, \
     key_strava_access_token, key_strava_refresh_token, key_strava_expired_at, get_config, read_config
 import masterdata
 from load import read_load, save_load
@@ -117,14 +119,14 @@ def load_strava_activity():
         for a in client.get_activities(
                 after=load.started_at_datetime + datetime.timedelta(seconds=-1),
                 before=load.started_at_datetime + datetime.timedelta(seconds=1)):
-            log(f"Found STRAVA activity: starated at={a.start_date}, "
+            log(f"Found STRAVA activity: started at={a.start_date}, "
                 f"name='{a.name}' ID", f"'{a.id}', commute={a.commute}, trainer={a.trainer}, "
                                        f"workout type={a.workout_type}")
 
             if len(a.name.split(": ", 1)) == 2:
-                description = a.name.split(": ", 1)[1]
+                title = a.name.split(": ", 1)[1]
             else:
-                description = a.name
+                title = a.name
 
             if a.commute:
                 type = masterdata.get_commute_type()
@@ -146,11 +148,51 @@ def load_strava_activity():
                 type = masterdata.get_default_type()
 
             log("Detected STRAVA activity type",type['name'])
-            load.add_strava(a.id, a.name, type['name'], description)
+
+            equipment_name = None
+            if a.gear_id:
+                log("gear_id", a.gear_id)
+                equipment = masterdata.find_equipment_by_strava_id(a.gear_id)
+                if equipment is None:
+                    print(f"[WARN] STRAVA equipment with ID {a.gear_id} not found ! To update master data use "
+                          f"'masterdata --refresh'")
+                else:
+                    equipment_name = equipment['name']
+            else:
+                print("[WARN] STRAVA activity hasn't got a equipment")
+
+            myconfig = config.get_strava_description_items()
+
+            descriptions = []
+
+            log("a.distance", f"{a.distance.num} {a.distance.unit}")
+            log("a.total_elevation_gain", f"{a.total_elevation_gain.num} {a.total_elevation_gain.unit}")
+            elevation = a.total_elevation_gain.num / (a.distance.num / 1000)
+            descriptions.append("\u25B2 {elevation:.1f} {unit1}/k{unit2}"
+                                .format(elevation=elevation, unit1=a.total_elevation_gain.unit, unit2=a.distance.unit))
+
+            for item in myconfig:
+                log("description rule", item)
+                if item['condition_field'] == 'strava.name':
+                    if item['condition_value'].lower().strip() == title.lower().strip():
+                        descriptions.append(item['text'])
+
+                if item['condition_field'] == 'training_type':
+                    if item['condition_value'].lower().strip() == type['name'].lower():
+                        descriptions.append(item['text'])
+
+            descriptions.append("Powered by https://github.com/chs8691/heroscript")
+
+            log("descriptions", descriptions)
+
+            load.add_strava(a.id, a.name, type['name'], title, equipment_name, descriptions,
+                            masterdata.find_activity_type_by_equipment(equipment_name))
+
             save_load(load)
+            print(f"Found activity on Strava")
             return
 
-        log("Strava activity found", "False")
+        print("[WARN] Strava activity not found !")
 
     except stravalib.exc.AccessUnauthorized as e:
         log("Exception occurred", e)
@@ -166,18 +208,58 @@ def strava_do_update():
     """
     print("Updating STRAVA...", end='', flush=True)
 
+    messages = []
+
     try:
 
         client = _setup_client()
         load = read_load()
         type = masterdata.get_type(load.training_type)['name']
 
-        client.update_activity(activity_id=load.strava_activity_id, name=load.strava_activity_name,
-                               commute=is_commute_training_type(type), trainer=is_indoor_training_type(type))
-
         if type == masterdata.get_competition_type()['name']:
-            print("[WARN] Can't set the STRAVA workout type to 'competition', please do this manually "
-                  "(missing this feature in stravalib API)")
+            messages.append(("[WARN] Can't set the STRAVA workout type to 'competition', please do this manually "
+                  "(missing this feature in stravalib API)"))
+
+        if load.strava_descriptions is None:
+            description = None
+        else:
+            description = "\n".join(load.strava_descriptions)
+
+        log("description", description)
+
+        if len(load.equipment_names) == 9:
+
+            messages.append("[WARN] No equipment in stage, equipment on Strava will not be be updated")
+
+            client.update_activity(activity_id=load.strava_activity_id,
+                                   name=load.strava_activity_name,
+                                   commute=is_commute_training_type(type),
+                                   trainer=is_indoor_training_type(type),
+                                   description=description,
+                                   )
+
+        else:
+            equipment = masterdata.find_first_strava_equipment(load.equipment_names)
+
+            if equipment is None:
+                messages.append("No equipment with Strava ID found! Are the master data up-to-date "
+                                "(use 'masterdata --refresh' to update)? ")
+                gear_id = False
+            else:
+                gear_id = equipment['strava_id']
+                log("Take equipment ID", f"{equipment['strava_id']} '{equipment['name']}'")
+
+            # There can ve prints inside, so print afterwards
+            client.update_activity(activity_id=load.strava_activity_id,
+                                   name=load.strava_activity_name,
+                                   commute=is_commute_training_type(type),
+                                   trainer=is_indoor_training_type(type),
+                                   gear_id=gear_id,
+                                   description=description,
+                                   )
+
+        for message in messages:
+            print(message)
 
         print(f" Done (Activity ID {load.strava_activity_id} updated)")
 
@@ -187,6 +269,73 @@ def strava_do_update():
             f"STRAVA access failed: Unauthorized. Maybe you have removed the app permission in your STRAVA profile!? "
             "Use 'heroscript config --strava_reset' to remove all login data.py. Then try the command again and you "
             "will be askt for app authorization.")
+
+
+def _get_training_type(gear):
+    regex = re.compile(".*heroscript\.training_type=\'(.*)\'.*")
+
+    types = masterdata.get_types()
+
+    log("gear.description", gear.description)
+    if regex.match(gear.description):
+        type = regex.match(gear.description).group(1).strip().lower()
+        log("Strava", f"Found training type {type} in gear {gear.name}")
+        if type.lower() in [t.lower() for t in types]:
+            return [t for t in types if t.lower() == type.lower() ][0]
+        else:
+            exit_on_error(f"Gear {gear.name}: Unknown training type '{type}'. "
+                          f"Please update your Strava equipment description with heroscript.training_type="
+                          f"'{types}'")
+
+
+def _get_activity_type(gear):
+    """
+    Maps strava gear to a heroscript activity type. First try is to findin the description heroscript.activity_type='..'.
+    If not found, the activity type will be set by frame type (for bikes) and 'run' for shoes.
+    :param gear: Shoe or Bike
+    :return: item from utility.activity_type_list
+    :exception: Mapping failed
+    """
+
+    regex_activity_type = re.compile(".*heroscript\.activity_type=\'(.*)\'.*")
+
+    log("gear.description", gear.description)
+    if regex_activity_type.match(gear.description):
+        activity_type = regex_activity_type.match(gear.description).group(1).strip().lower()
+        log("Strava", f"Found activity type {activity_type} in gear {gear.name}")
+        if activity_type in utility.activity_type_list:
+            return activity_type
+        else:
+            exit_on_error(f"Gear {gear.name}: Unknown activity type '{activity_type}'. "
+                          f"Please update your Strava equipment description with heroscript.activity_type='{utility.activity_type_list}'")
+
+    # Only bikes have a frame type
+    if hasattr(gear, 'frame_type'):
+
+        # MTB
+        if gear.frame_type == 1:
+            return utility.activity_type_mtb
+
+        # Cross Bike
+        elif gear.frame_type == 2:
+            return utility.activity_type_roadbike
+
+        # Race Bike
+        elif gear.frame_type == 3:
+            return utility.activity_type_roadbike
+
+        # Triathlon Bike
+        elif gear.frame_type == 4:
+            return utility.activity_type_roadbike
+
+        else:
+            exit_on_error(f"Bike '{gear.name}' (ID={gear.id}) has an unknown frame type '{gear.frame_type}'. "
+                          "You have to edit this Equipment in Strava.")
+
+    # Shoe
+    else:
+        # In der Schuh-Beschreibung einen Text z.B. activity_type='hiking' aber auch heroscript._type='roadbike'
+        return utility.activity_type_run
 
 
 def strava_process_get_masterdata():
@@ -200,12 +349,28 @@ def strava_process_get_masterdata():
     client = _setup_client()
 
     for shoe in client.get_athlete().shoes:
-        ret.append(dict(id=shoe.id, name=shoe.name, type='shoe'))
+        log("shoe", shoe)
+        gear = client.get_gear(shoe.id)
+        ret.append(dict(
+            id=shoe.id,
+            name=shoe.name,
+            type='shoe',
+            activity_type=_get_activity_type(gear),
+            training_type=_get_training_type(gear),
+        ))
 
     for bike in client.get_athlete().bikes:
-        ret.append(dict(id=bike.id, name=bike.name, type='bike'))
+        log("bike", bike)
+        gear = client.get_gear(bike.id)
+        ret.append(dict(
+            id=bike.id,
+            name=bike.name,
+            type='bike',
+            activity_type=_get_activity_type(gear),
+            training_type=_get_training_type(gear),
+        ))
 
-    log("Got data.py from STRAVA", ret)
+    log("Got master data from STRAVA", ret)
 
     return ret
 

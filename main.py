@@ -1,6 +1,8 @@
 import sys
 
-from cmd_config import process_config, init_config, default_port
+import utility
+from cmd_config import process_config, init_config
+from config import default_port
 from cmd_masterdata import init_masterdata_storage
 from cmd_masterdata import process_masterdata
 from cmd_transfer import process_transfer
@@ -84,7 +86,8 @@ def parse_args():
     sub_parsers = parser.add_subparsers()
 
     # ######### masterdata #########
-    data_parser = sub_parsers.add_parser('masterdata', help="Set and show master data like equipment and training type.")
+    data_parser = sub_parsers.add_parser('masterdata',
+                                         help="Set and show master data like equipment and training type.")
 
     data_parser.add_argument("-l", "--list",
                              required=False,
@@ -96,7 +99,11 @@ def parse_args():
                              action='store_true',
                              help="Update all master data from Velohero (equipments and training types). "
                                   "A EQUIPMENT is compared by name: A equipment will only added to the master data, if"
-                                  "it is found in Velohero and STRAVA, all other equipments will be ignored. "
+                                  "it is found in Velohero and Strava, all other equipments will be ignored. "
+                                  "In Strava, the equipment can be used to specify activity type and training type:"
+                                  "For bikes, the frame type will be mapped to the activity type (Mountainbike to mtb, etc.). "
+                                  "Shoes, will be mapped to run. In addition, this can be overridden by a value heroscript.activity_type='YOUR_CHOOSEN_TYPE' "
+                                  "in the description, for instance heroscript.activity_type='fitness'. "
                                   "The name in Velohero must be a substring in STRAVA's name, but spaces and case will be ignored."
                                   "A TYPE is configured by the user in Velohero (Training Type). There is a type specific"
                                   "behavior: A type named 'Competition/Wettkampf' will be used to set the Competition flag in STRAVA,"
@@ -115,7 +122,7 @@ def parse_args():
 
     config_parser.add_argument("-l", "--list",
                                action='store_true',
-                               help="Print all settings as a list")
+                               help="Print all settings as a list. This is the default argument.")
 
     # For every new argument added here, cmd_config.py must be enhanced:
     #    - Define a constant key_....
@@ -144,10 +151,40 @@ def parse_args():
                                help="Port for internal webserver, default is {}. Example: --port 1234"
                                .format(default_port))
 
+    config_parser.add_argument("-ld", "--load_dir",
+                               required=False,
+                               help="Directory for the activity files to load. Example: --load_dir '/garmin/import/tcx'"
+                               )
+
+    config_parser.add_argument("-ad", "--archive_dir",
+                               required=False,
+                               help="Default directory to transfer the track file to this archive directory. "
+                                    "Supported placeholder is '{YYYY}'."
+                                    "Examples: '../archive' or '/home/chris/tracks/{YYYY}'"
+                               )
+
+    config_parser.add_argument("-sd", "--strava_description",
+                               required=False,
+                               help="Add a description line automatically to the Strava activity, if the value condition maps. "
+                                    "Supported values for the condition are 'strava.name(TEXT TO SEARCH FOR)' "
+                                    "and training_type((TRAINING_TYPE)) followed by a questionmark '?' and the text. " 
+                                    "The original description will be purged, if exists."
+                                    "Example 1: --strava_description=strava.name(die runden stunde)?https://www.instagram.com/explore/tags/dierundestunde/ "
+                                    "will add the link to the description, if the Activity name is 'Die Runden Stunde'. "
+                                    "Example 2: --strava_description=training_type(pendel)?https://flic.kr/s/aHsm3QRWjT "
+                                    "will create the link, if the training type is set to 'Pendel'.")
+
     config_parser.set_defaults(func=execute_config)
 
     # ######### load #########
-    load_parser = sub_parsers.add_parser('load', help="Load a track file")
+    load_parser = sub_parsers.add_parser('load',
+                                         description="Load an activity file from a local directory into the stage."
+                                                     "With no arguments, the next file from the default directory "
+                                                     "will be loaded. For this the default directory must be set once "
+                                                     "by velohero config --load_dir 'your_path'. Or the directory "
+                                                     "or a file can be set by an optional argument.",
+                                         # help="",
+                                         )
 
     load_parser.add_argument("-f", "--file",
                              required=False,
@@ -171,13 +208,13 @@ def parse_args():
     # ######### set #########
     set_parser = sub_parsers.add_parser('set', help="Set attributes for a loaded track file")
 
-    set_parser.add_argument("-a", "--activity_type",
+    set_parser.add_argument("-at", "--activity_type",
                             required=False,
-                            choices=['run', 'mtb', 'roadbike', 'fitness', 'hiking'],
+                            choices=utility.activity_type_list,
                             help="Set the activity type to Running, Mountain Biking, Road Cycling, Fitness or Hiking. "
                                  "Will be used to set the workout type in Velohero.")
 
-    set_parser.add_argument("-t", "--training_type",
+    set_parser.add_argument("-tt", "--training_type",
                             required=False,
                             help="Set the training type by its name (unset with ''). "
                                  "The input must match exactly one master data item "
@@ -202,10 +239,10 @@ def parse_args():
                                  "The name must match (case insensitive) the material name exactly or a unique substring of it. "
                                  "Examples: 'Laufschuhe Saucony Ride ISO, MTB Focus', ''")
 
-    set_parser.add_argument("-d", "--description",
+    set_parser.add_argument("-t", "--title",
                             required=False,
-                            help="Set the activity description (unset with '').  In Velhero this will be saved as "
-                                 "comment, in Strava this will be part of the name. "
+                            help="Set the activity title (unset with '').  In Velhero this will be saved as "
+                                 "comment, in Strava this will be part of the name (without the optional training type). "
                                  "Examples: 'Wonderful weather tour', or  'Day 1 of 5'")
 
     set_parser.add_argument("-c", "--comment",
@@ -277,17 +314,17 @@ def parse_args():
 
     vh_field_parser.add_argument("-sport", "--sport_id",
                                  required=False,
-                                 help="Set Sport (field 'sport_id'). Value can be id or description (case sensitive). "
+                                 help="Set Sport (field 'sport_id'). Value can be sport's id or name (case insensitive). "
                                       "Examples: '1', 'Mountainbike'")
 
     vh_field_parser.add_argument("-type", "--type_id",
                                  required=False,
-                                 help="Set value Training type (field 'type_id'). Value can be id or description "
+                                 help="Set value Training type (field 'type_id'). Value can be id or name "
                                       "(case sensitive). Examples: '7431', 'Training")
 
     vh_field_parser.add_argument("-route", "--route_id",
                                  required=False,
-                                 help="Set value Route (field 'route_id'). Value can be id or description "
+                                 help="Set value Route (field 'route_id'). Value can be id or name "
                                       "(case sensitive). Examples: '12345', 'Berlin Marathon")
 
     vh_field_parser.add_argument("-dist", "--workout_dist_km",

@@ -31,13 +31,39 @@ def _do_list():
         "Training Types not set. Use 'reload' to fill data.py"
 
     if 'equipments' in data:
-        print("EQUIPMENTS")
+
+        print("\nEQUIPMENTS")
+
+        print("    {:10s} | {:10s} | {:20s} | {:20s} | {} "
+              .format("VELOHERO-ID", "STRAVA-ID", "ACTIVITY TYPE", "TRAINING TYPE", "NAME"))
+
+        line = "     {id:10s} | {strava_id:10s} | {activity_type:20s} | {training_type:20s} | {name} "
         print("  Shoes")
         for t in [t for t in data['equipments'] if t['type'] == 'shoe']:
-            print("    Velohero-ID {id:7d}: '{name}' (STRAVA-ID={strava_id})".format(id=int(t['velohero_id']), name=t['name'], strava_id=t['strava_id']))
+            print(line.format(id=str(t['velohero_id']),
+                              name=str(t['name']),
+                              strava_id=str(t['strava_id']),
+                              activity_type=str(t['activity_type']),
+                              training_type=str(t['training_type']),
+                              ))
+
         print("  Bikes")
         for t in [t for t in data['equipments'] if t['type'] == 'bike']:
-            print("    Velohero-ID {id:7d}: '{name}' (STRAVA-ID={strava_id})".format(id=int(t['velohero_id']), name=t['name'], strava_id=t['strava_id']))
+            print(line.format(id=str(t['velohero_id']),
+                              name=str(t['name']),
+                              strava_id=str(t['strava_id']),
+                              activity_type=str(t['activity_type']),
+                              training_type=str(t['training_type']),
+                              ))
+
+        print("  Unspecified")
+        for t in [t for t in data['equipments'] if t['type'] is None]:
+            print(line.format(id=str(t['velohero_id']),
+                              name=str(t['name']),
+                              strava_id=str(t['strava_id']),
+                              activity_type=str(t['activity_type']),
+                              training_type=str(t['training_type']),
+                              ))
     else:
         "Training Types not set. Use 'reload' to fill data.py"
 
@@ -78,18 +104,48 @@ def _merge_equipments(velohero_dict, strava_dict):
 
     ret = []
 
+    strava_count = len(strava_dict)
+    velo_count = len(velohero_dict)
+
     for v in velohero_dict:
-        # Comapare case intensitive, ignore spaces. Velo's name must be a substring from STRAVA's name
+        # Compare case intensitive, ignore spaces. Velo's name must be a substring from STRAVA's name
         regex = re.compile(".*" + v['name'].replace(" ", "") + ".*", re.IGNORECASE)
         stravas = [s for s in strava_dict if regex.match(s['name'].replace(" ",""))]
-        if len(stravas) > 0:
-            ret.append(dict(name=v['name'], type=stravas[0]['type'], velohero_id=v['velohero_id'], strava_id=stravas[0]['id']))
-            log("Mapped", f"{v['name']}=={stravas[0]['name']}")
-        else:
-            log("Dropped velohero's", v)
 
-    print("Mapped {} equipments by name. {} Velohero's and {} STRAVA equipments could not be mapped (Use --log to get more details)"
-          .format(len(ret), len(velohero_dict) - len(ret), len(strava_dict) - len(ret)))
+        if len(stravas) > 0:
+            strava_count -= 1
+            velo_count -= 1
+            ret.append(dict(
+                name=v['name'],
+                type=stravas[0]['type'],
+                velohero_id=v['velohero_id'],
+                strava_id=stravas[0]['id'],
+                activity_type=stravas[0]['activity_type'],
+                training_type=stravas[0]['training_type'],
+            ))
+
+            log("Mapped with Strava", f"{v['name']}=={stravas[0]['name']}")
+
+        else:
+            velo_count -= 1
+
+            ret.append(dict(
+                name=v['name'],
+                type=None,
+                velohero_id=v['velohero_id'],
+                strava_id=None,
+                activity_type=None,
+                training_type=None,
+            ))
+
+            log("Velohero only", v)
+
+    if (velo_count+strava_count==0):
+        print("Mapped all ({equi}) equipments by name.".format(equi=len(ret)))
+    else:
+        print("Mapped {equi} equipments by name. {velos} Velohero and {stravas} Strava equipments could not be mapped "
+              "(Use --log to get more details)"
+              .format(equi=len(ret), velos=velo_count, stravas=strava_count))
 
     return ret
 

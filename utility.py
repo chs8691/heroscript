@@ -1,6 +1,19 @@
 import datetime
 import re
 
+activity_type_run = 'run'
+activity_type_mtb = 'mtb'
+activity_type_roadbike = 'roadbike'
+activity_type_fitness = 'fitness'
+activity_type_hiking = 'hiking'
+
+activity_type_list = [activity_type_run,
+                      activity_type_mtb,
+                      activity_type_roadbike,
+                      activity_type_fitness,
+                      activity_type_hiking,
+                      ]
+
 log_switch = False
 
 def set_log_switch(value):

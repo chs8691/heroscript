@@ -28,12 +28,12 @@ class Stage:
         self.route_name = None
 
         # Free text
-        self.description = None
+        self.title = None
 
         # Free text
         self.comment = None
 
-        # Materials must match with their name
+        # List with names
         self.equipment_names = None
 
         # Will be set with activity file. String like 2020-01-31T04:39:19.000Z
@@ -81,6 +81,7 @@ class Stage:
         # STRAVA fields will be set with add_strava
         self.strava_activity_id = None
         self.strava_activity_name = None
+        self.strava_descriptions = None
 
     def init_by_tcx(self, tcxparser):
         self.original_activity_type = tcxparser.activity_type
@@ -97,18 +98,26 @@ class Stage:
         self.distance = tcxparser.distance
         self.hr_average = tcxparser.hr_avg
 
-    def add_strava(self, id, name, type, description):
+    def add_strava(self, id, name, type, title, equipment_name=None, descriptions=None, activity_type=None):
         """
-        Add STRAVA data.py.
+        Add STRAVA data.
         :param id: STRAVA Activity ID as int
         :param name: Activity's name as String
         :param type: Extracted type name
+        :param equipment: name of a master data's equipment or None. If given, existing equipment list will be cleared
         """
         self.strava_activity_id = id
         self.strava_activity_name = name
         self.training_type = type
-        self.description = description
+        self.title = title
+        self.new_activity_type = activity_type
 
+        if descriptions:
+            self.strava_descriptions = descriptions
+
+        if equipment_name:
+            self.equipment_names = []
+            self.equipment_names.append(equipment_name)
 
     def distance_unit_abbreviation(self):
         """
@@ -130,8 +139,12 @@ class Stage:
     def set_route_name(self, value):
         self.route_name = value
 
-    def set_description(self, value):
-        self.description = value
+    def set_title(self, value):
+        """
+        Set a title for the activity manually. The name will be mapped to velohero's comment and strava's name.
+        :param value: String with a title
+        """
+        self.title = value
         if len(self.strava_activity_name.split(": ", 1)) == 2:
             pre = self.strava_activity_name.split(": ", 1)[0]
             self.strava_activity_name = f"{pre}: {value}"
@@ -142,6 +155,10 @@ class Stage:
         self.comment = value
 
     def set_equipment_names(self, values):
+        """
+        Set equipment names
+        :param values: List with equipments names
+        """
         self.equipment_names = values
 
     def set_strava_activity_name(self, name):

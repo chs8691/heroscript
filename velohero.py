@@ -4,7 +4,7 @@ import re
 import requests as requests
 from lxml import html
 
-import cmd_config
+from config import key_velohero_sso_id, get_config
 from utility import log, exit_on_rc_error, exit_on_error
 
 # Filled with ID for SSO login
@@ -51,7 +51,7 @@ def velohero_process_get_masterdata():
     """
     # log("velohero_process_get_data", "start")
 
-    # velohero_check_sso_login()
+    velohero_check_sso_login()
 
     ret = dict(
         types=get_href_master_data(load_training_types(), 'types'),
@@ -130,22 +130,22 @@ def load_training_types():
     log("load_training_types", "start")
 
     # just for for testing
-    return html.parse(open('velo_hero_training_types.html', 'rt')).getroot()
+    # return html.parse(open('velo_hero_training_types.html', 'rt')).getroot()
 
-    # url = "https://app.velohero.com/types/list"
-    # log("url", str(url))
-    # r = requests.post(url,
-    #                   headers={
-    #                       'user-agent': my_user_agent,
-    #                   },
-    #                   data.py={
-    #                       'sso': sso_id,
-    #                   })
-    #
-    # if r.status_code != 200:
-    #     exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
-    #
-    # return html.fromstring(r.text)
+    url = "https://app.velohero.com/types/list"
+    log("url", str(url))
+    r = requests.post(url,
+                      headers={
+                          'user-agent': my_user_agent,
+                      },
+                      data={
+                          'sso': sso_id,
+                      })
+
+    if r.status_code != 200:
+        exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
+
+    return html.fromstring(r.text)
 
 
 def load_equipments():
@@ -156,22 +156,22 @@ def load_equipments():
     log("load_equipments", "start")
 
     # just for for testing
-    return html.parse(open('velo_hero_equipments.html', 'rt')).getroot()
+    # return html.parse(open('velo_hero_equipments.html', 'rt')).getroot()
 
-    # url = "https://app.velohero.com/types/list"
-    # log("url", str(url))
-    # r = requests.post(url,
-    #                   headers={
-    #                       'user-agent': my_user_agent,
-    #                   },
-    #                   data.py={
-    #                       'sso': sso_id,
-    #                   })
-    #
-    # if r.status_code != 200:
-    #     exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
-    #
-    # return html.fromstring(r.text)
+    url = "https://app.velohero.com/equipment/list"
+    log("url", str(url))
+    r = requests.post(url,
+                      headers={
+                          'user-agent': my_user_agent,
+                      },
+                      data={
+                          'sso': sso_id,
+                      })
+
+    if r.status_code != 200:
+        exit_on_rc_error("HTTP error {}. Status code".format(url), r.status_code)
+
+    return html.fromstring(r.text)
 
 
 def get_select_values_value(tree, name):
@@ -234,7 +234,8 @@ def get_href_equipments(tree):
     i = 0
     root = tree.xpath("//table[@class='table table-hover']/tbody/tr")
     for e in root:
-        if e.xpath("td")[0].xpath("span/i")[0].xpath("@title='Currently in use'"):
+        if e.xpath("td")[0].xpath("span/i")[0].xpath("@title='Currently in use'") or \
+                e.xpath("td")[0].xpath("span/i")[0].xpath("@title='Derzeit in Gebrauch'"):
             ret.append(dict(
                 velohero_id=regex.match(e.xpath('td')[2].xpath("a")[0].attrib['href']).group(1).strip(),
                 name=e.xpath('td')[2].xpath("a/text()")[0].strip()))
@@ -670,8 +671,9 @@ def velohero_do_update(workout_id, args, load):
         if load.route_name is not None:
             route_id = get_selected_id(route_id_dict, load.route_name)
 
-        if load.comment is not None:
-            workout_comment = load.comment
+        # Map description to comment
+        if load.title is not None:
+            workout_comment = load.title
 
     log('New data.py', ":")
     log('workout_date', workout_date)
@@ -735,7 +737,7 @@ def velohero_check_sso_login():
     log("check_sso_login", "begin")
     global sso_id
 
-    sso_id = cmd_config.get_config(cmd_config.key_velohero_sso_id)
+    sso_id = get_config(key_velohero_sso_id)
 
     log("sso_id", sso_id)
 

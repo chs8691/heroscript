@@ -9,15 +9,13 @@ from utility import log, exit_on_error
 
 def _set_training_type(load, training_type):
     """
-    Procondition: The type must exists as masterdata.
+    Precondition: The type must exists in master data.
     Also updates the strava activity name prefix
-    :param load:
-    :param type: Valid training type from masterdata
+    :param load: Actual load
+    :param type: Valid training type from master data
     """
 
     load.set_training_type(training_type)
-
-    data = read_masterdata()
 
     # STRAVA activity has a commute flag
     if training_type.lower() == 'commute' or training_type.lower() == 'pendel':
@@ -85,14 +83,14 @@ def process_set(args):
             for equipment in args.equipment_names.split(','):
                 equipment_names.append(find_equipment_by_name(equipment.strip())['name'])
         else:
-            equipment_names = find_equipment_by_name([args.equipment_names.strip().lower()][0])['name']
+            equipment_names.append(find_equipment_by_name([args.equipment_names.strip().lower()][0])['name'])
 
         log("equipment_names", equipment_names)
         load.set_equipment_names(equipment_names)
 
-    if args.description is not None:
-        log("args.description", args.description)
-        load.set_description(args.description.strip())
+    if args.name is not None:
+        log("args.name", args.name)
+        load.set_title(args.name.strip())
 
     if args.comment is not None:
         log("args.comment", args.comment)

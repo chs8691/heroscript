@@ -1,32 +1,30 @@
 import pickle
+import re
 
+import masterdata
 from storage import Storage
 from utility import log, exit_on_error
 
-# For every config item, this constant must be defined
-key_velohero_sso_id = 'velohero_sso_id'
-
-key_port = 'port'
-default_port='4312'
-
-key_strava_client_id = 'strava_client_id'
-
-# Client ID of my STRAVA API (Christian Schulzendorff). Please, don't use this API only for Heroscript
-default_strava_client_id = '43527'
-
-key_strava_client_secret = 'strava_client_secret'
-
-# Please, don't share this 'secret'
-default_strava_client_secret = '509d7ed7ab29c93bb1a80fa05f3a1627c57e413f'
+import config
 
 
 def process_config(args):
     log("process_config", "start")
 
-    if args.list:
-        _list_config()
-    else:
+    if args.strava_client_id or \
+            args.strava_reset or \
+            args.velohero_sso_id or \
+            args.port \
+            or args.strava_description or\
+            args.load_dir or \
+            args.archive_dir:
         _set_argument(args)
+
+    elif args.list:
+        _list_config()
+
+    else:
+        _list_config()
 
     log("process_config", "end")
 
@@ -43,47 +41,29 @@ def init_config():
     if not storage.get_config_path().exists():
         print("Config not found, create it now: {}".format(storage.get_config_path().absolute()))
         # Create new config and initialize it with default values
-        _save_config(dict())
+        config._save_config(dict())
 
-    config = read_config()
+    myconfig = config.read_config()
 
-    if key_port not in config:
-        log("Create default key_port", default_port)
-        save_item(key_port, default_port)
+    if config.key_port not in myconfig:
+        log("Create default key_port", config.default_port)
+        config.save_item(config.key_port, config.default_port)
 
-    if key_strava_client_id not in config:
-        log("Create default strava_client_id", key_strava_client_id)
-        save_item(key_strava_client_id, default_strava_client_id)
+    if config.key_strava_client_id not in myconfig:
+        log("Create default strava_client_id", config.key_strava_client_id)
+        config.save_item(config.ey_strava_client_id, config.default_strava_client_id)
 
-    if key_strava_client_secret not in config:
-        log("Create default strava_client_secret", key_strava_client_secret)
-        save_item(key_strava_client_secret, default_strava_client_secret)
+    if config.key_strava_client_secret not in myconfig:
+        log("Create default strava_client_secret", config.key_strava_client_secret)
+        config.save_item(config.key_strava_client_secret, config.default_strava_client_secret)
 
     log("init_config", "end")
 
 
-def save_item(key, value):
-    """
-    Add or replace one item in the config list
-    :param item: Item to append or replace
-    """
-    config = read_config()
-
-    log("Setting {}".format(key), value)
-
-    # Remove old item, if exists
-    if key in config:
-        config.pop(key)
-
-    config[key] = value
-
-    _save_config(config)
-
-
 def _init_config():
     # Create new config and initialize it with default values
-    _save_config(dict())
-    save_item(key_port, default_port)
+    config._save_config(dict())
+    config.save_item(config.key_port, config.default_port)
 
 
 def _set_argument(args):
@@ -92,20 +72,50 @@ def _set_argument(args):
     """
     cnt = 0
     if args.velohero_sso_id:
-        save_item(key_velohero_sso_id, args.velohero_sso_id)
+        config.save_item(config.key_velohero_sso_id, args.velohero_sso_id)
         cnt += 1
 
     if args.port:
-        save_item(key_port, args.port)
+        config.save_item(config.key_port, args.port)
+        cnt += 1
+
+    if args.load_dir:
+        config.save_item(config.key_load_dir, args.load_dir)
+        cnt += 1
+
+    if args.archive_dir:
+        config.save_item(config.key_archive_dir, args.archive_dir)
         cnt += 1
 
     if args.strava_reset:
-        save_item(key_strava_access_token, None)
+        config.save_item(config.key_strava_access_token, None)
         cnt += 1
-        save_item(key_strava_refresh_token, None)
+        config.save_item(config.key_strava_refresh_token, None)
         cnt += 1
-        save_item(key_strava_expired_at, None)
+        config.save_item(config.key_strava_expired_at, None)
         cnt += 1
+
+    if args.strava_description:
+
+        regex1 = re.compile("(strava.name)\((.*?)\)\?(.*)")
+        res1 = regex1.match(args.strava_description)
+
+        regex2 = re.compile("(training_type)\((.*?)\)\?(.*)")
+        res2 = regex2.match(args.strava_description)
+
+        if res1 and len(res1.group(3).strip()) > 0:
+                config.save_item("{}{}".format(config.key_strava_description_prefix, res1.group(1)),
+                          "{}?{}".format(res1.group(2), res1.group(3)))
+                cnt += 1
+
+        elif res2:
+            training_type = masterdata.get_type(res2.group(2))
+            config.save_item("{}{}".format(config.key_strava_description_prefix, res2.group(1)),
+                      "{}?{}".format(training_type['name'], res2.group(3)))
+            cnt += 1
+
+        else:
+            exit_on_error("Invalid config value. See 'config --help.'")
 
     if cnt == 0:
         print("No config value set. Did you set proper key? For a value description see: 'config --help'")
@@ -117,44 +127,9 @@ def _list_config():
     """
     List values
     """
-    config = read_config()
+    myconfig = config.read_config()
 
-    for key, value in config.items():
+    for key, value in myconfig.items():
         print("{}: {}".format(key, value))
 
     return
-
-
-def _save_config(config):
-    storage = Storage()
-    file = storage.get_config_path()
-    # log("file_name", file)
-
-    with file.open('wb') as file:
-        pickle.dump(config, file)
-
-
-def get_config(key):
-    """
-    Get the value for the given key.  The key must exist otherwise the exit is processed.
-    :param key String with key name
-    :return: Found value
-    """
-    if key in read_config():
-        return read_config()[key]
-    else:
-        exit_on_error(f"Config key '{key}' not found !")
-
-
-def read_config():
-    storage = Storage()
-
-    with storage.get_config_path().open('rb') as file:
-        config = pickle.load(file)
-
-    return config
-
-
-key_strava_access_token = 'strava_access_token'
-key_strava_refresh_token = 'strava_refresh_token'
-key_strava_expired_at = 'strava_expired_at'
