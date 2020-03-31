@@ -6,3 +6,11 @@
 2020-03-10 09:43:37,417 [INFO   ] Profile page https://connect.garmin.com/modern/profile
 2020-03-10 09:43:38,076 [INFO   ] Userstats page https://connect.garmin.com/modern/proxy/userstats-service/statistics/6b970a16-d759-4e7f-8b1e-e6c170e96ecd
 2020-03-10 09:43:39,257 [INFO   ] Activity list URL https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities?start=0&limit=2
+2020-03-29 15:53:19,303 [INFO   ] Starting /usr/lib/garmin-connect-export/gcexport.py version 2.3.0, using Python version 2.7.17
+2020-03-29 15:53:19,311 [INFO   ] New logfile level: INFO
+2020-03-29 15:53:19,312 [WARNING] Output directory /media/diskstation/chrisDok/Freizeit/Sport/Trainingsdaten/garmin-export already exists. Will skip already-downloaded files and append to the CSV file.
+2020-03-29 15:53:19,313 [INFO   ] Connecting to https://sso.garmin.com/sso/signin?webhost=https%3A%2F%2Fconnect.garmin.com&locale=en_US&rememberMeShown=true&generateNoServiceTicket=false&id=gauth-widget&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&connectLegalTerms=true&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&displayNameShown=false&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fen-US%2Fsignin&rememberMeChecked=false&generateExtraServiceTicket=true&openCreateAccount=false&showPassword=true&createAccountShown=true&embedWidget=false&initialFocus=true&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&globalOptInChecked=false&cssUrl=https%3A%2F%2Fstatic.garmincdn.com%2Fcom.garmin.connect%2Fui%2Fcss%2Fgauth-custom-v1.2-min.css&locationPromptShown=true&globalOptInShown=true&mobile=false&clientId=GarminConnect&generateTwoExtraServiceTickets=false&consumeServiceTicket=false
+2020-03-29 15:53:21,826 [INFO   ] Authentication URL https://connect.garmin.com/modern/activities?ticket=ST-05399270-5WeVoJCmabMC5NUPTHgS-cas
+2020-03-29 15:53:26,378 [INFO   ] Profile page https://connect.garmin.com/modern/profile
+2020-03-29 15:53:26,905 [INFO   ] Userstats page https://connect.garmin.com/modern/proxy/userstats-service/statistics/6b970a16-d759-4e7f-8b1e-e6c170e96ecd
+2020-03-29 15:53:29,316 [INFO   ] Activity list URL https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities?start=0&limit=2

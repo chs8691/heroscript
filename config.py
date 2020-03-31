@@ -24,10 +24,10 @@ key_strava_client_secret = 'strava_client_secret'
 default_strava_client_secret = '509d7ed7ab29c93bb1a80fa05f3a1627c57e413f'
 
 
-key_strava_access_token = 'strava.access_token'
-key_strava_refresh_token = 'strava.refresh_token'
-key_strava_expired_at = 'strava.expired_at'
-key_strava_description_prefix = 'strava.description__BY__'
+key_strava_access_token = 'strava_access_token'
+key_strava_refresh_token = 'strava_refresh_token'
+key_strava_expired_at = 'strava_expired_at'
+key_strava_description_prefix = 'strava_description__BY__'
 
 
 def save_item(key, value):
@@ -54,7 +54,7 @@ def get_strava_description_items():
     :return: Dictionary with config items with shortcut keys, can be empty. For instance:
             [
                 {
-                    'condition_field': 'strava.name',
+                    'condition_field': 'strava_name',
                     'condition_value': 'die runden stunde',
                     'text': 'ttt',
                 },

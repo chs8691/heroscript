@@ -51,7 +51,7 @@ def init_config():
 
     if config.key_strava_client_id not in myconfig:
         log("Create default strava_client_id", config.key_strava_client_id)
-        config.save_item(config.ey_strava_client_id, config.default_strava_client_id)
+        config.save_item(config.key_strava_client_id, config.default_strava_client_id)
 
     if config.key_strava_client_secret not in myconfig:
         log("Create default strava_client_secret", config.key_strava_client_secret)
@@ -97,7 +97,7 @@ def _set_argument(args):
 
     if args.strava_description:
 
-        regex1 = re.compile("(strava.name)\((.*?)\)\?(.*)")
+        regex1 = re.compile("(strava_name)\((.*?)\)\?(.*)")
         res1 = regex1.match(args.strava_description)
 
         regex2 = re.compile("(training_type)\((.*?)\)\?(.*)")

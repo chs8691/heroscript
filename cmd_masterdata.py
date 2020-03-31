@@ -105,16 +105,14 @@ def _merge_equipments(velohero_dict, strava_dict):
     ret = []
 
     strava_count = len(strava_dict)
-    velo_count = len(velohero_dict)
 
     for v in velohero_dict:
-        # Compare case intensitive, ignore spaces. Velo's name must be a substring from STRAVA's name
+        # Compare non-case sensitive, ignore spaces. Velo's name must be a substring from STRAVA's name
         regex = re.compile(".*" + v['name'].replace(" ", "") + ".*", re.IGNORECASE)
         stravas = [s for s in strava_dict if regex.match(s['name'].replace(" ",""))]
 
         if len(stravas) > 0:
             strava_count -= 1
-            velo_count -= 1
             ret.append(dict(
                 name=v['name'],
                 type=stravas[0]['type'],
@@ -127,7 +125,6 @@ def _merge_equipments(velohero_dict, strava_dict):
             log("Mapped with Strava", f"{v['name']}=={stravas[0]['name']}")
 
         else:
-            velo_count -= 1
 
             ret.append(dict(
                 name=v['name'],
@@ -140,12 +137,15 @@ def _merge_equipments(velohero_dict, strava_dict):
 
             log("Velohero only", v)
 
-    if (velo_count+strava_count==0):
-        print("Mapped all ({equi}) equipments by name.".format(equi=len(ret)))
+    if (strava_count==0):
+        print("Mapped all ({equi}) Velohero's to Strava's equipments by name.".format(equi=len(ret)))
     else:
-        print("Mapped {equi} equipments by name. {velos} Velohero and {stravas} Strava equipments could not be mapped "
-              "(Use --log to get more details)"
-              .format(equi=len(ret), velos=velo_count, stravas=strava_count))
+        print("Mapped {equi} equipments by name.  But {stravas} Strava equipments could not be mapped:"
+              .format(equi=len(ret), stravas=strava_count))
+        for s in strava_dict:
+            if len([r for r in ret if r['strava_id'] == s['id']]) == 0:
+                print(f"  - Missing in Velohero: '{s['name']}'")
+
 
     return ret
 
@@ -172,11 +172,13 @@ def _tag_types(types):
 def _do_refresh():
     log("_refresh_data", "started")
 
+    print("Collecting data from Velohero..", end='', flush=True)
     velohero_dict = velohero.velohero_process_get_masterdata()
+    print("done! From Strava..", end='', flush=True)
     strava_dicts = strava.strava_process_get_masterdata()
+    print("done!  ")
 
     equipments = _merge_equipments(velohero_dict['equipments'], strava_dicts)
-    # types = _tag_types(velohero_dict['types'])
 
     data = read_masterdata()
 

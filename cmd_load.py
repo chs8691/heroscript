@@ -8,8 +8,43 @@ from strava import load_strava_activity
 from utility import log, exit_on_error
 
 
+def print_info():
+
+    dir = config.find(config.key_load_dir)
+
+    if dir is None:
+        print("No load directory configured. To set,  use 'heroscript config --load_directory PATH'.")
+        return
+
+    if not path.exists(dir):
+        exit_on_error("Not a valid directory: '{}'. "
+                      "To change,  use 'heroscript config --load_directory PATH'.".format(dir))
+
+    types = ('*.TCX', '*.tcx')
+    files_grabbed = []
+
+    for files in types:
+        files_grabbed.extend(glob.glob(path.join(dir, files)))
+
+    files_grabbed.sort()
+
+    if len(files_grabbed) == 0:
+        print("No track file found in {}".format(dir))
+        return
+
+    print(f"Found {len(files_grabbed)} track file(s) in '{dir}':")
+    for file in files_grabbed:
+
+        print(f"  {path.basename(file)}")
+
+
+
 def process_load(args):
     log("process_load", "start")
+
+    if args.info:
+        print_info()
+        return
 
     if args.file:
         create_load(args.file)

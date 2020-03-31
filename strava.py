@@ -159,7 +159,7 @@ def load_strava_activity():
                 else:
                     equipment_name = equipment['name']
             else:
-                print("[WARN] STRAVA activity hasn't got a equipment")
+                print("[WARN] STRAVA activity hasn't got an equipment")
 
             myconfig = config.get_strava_description_items()
 
@@ -173,7 +173,7 @@ def load_strava_activity():
 
             for item in myconfig:
                 log("description rule", item)
-                if item['condition_field'] == 'strava.name':
+                if item['condition_field'] == 'strava_name':
                     if item['condition_value'].lower().strip() == title.lower().strip():
                         descriptions.append(item['text'])
 

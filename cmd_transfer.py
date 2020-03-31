@@ -1,6 +1,8 @@
 from os import path, replace
 from pathlib import Path
 
+import config
+from config import get_config
 from load import save_load, read_load
 from strava import strava_do_update
 from velohero import velohero_check_sso_login
@@ -12,7 +14,7 @@ import utility
 def process_transfer(args):
     # utility.log("process_transfer", "start")
 
-    if not args.velohero and not args.archive and not args.strava:
+    if not args.velohero and not args.archive and not args.strava and not args.dir:
         utility.exit_on_error("Missing transfer destination(s). Use --help to see possible arguments")
 
     load = read_load()
@@ -27,11 +29,16 @@ def process_transfer(args):
     if load.new_activity_type is None:
         utility.exit_on_error(f"Activity type not set! Use heroscript set --activity_type '{utility.activity_type_list}'")
         
-
     dest_dir = None
     dest_file = None
+
+    if args.dir:
+        dest_dir = args.dir
+
     if args.archive:
-        dest_dir = utility.resolve_path(args.archive, load.started_at)
+        dest_dir = utility.resolve_path(get_config(config.key_archive_dir), load.started_at)
+
+    if args.dir or args.archive:
         if not path.exists(dest_dir):
             utility.warn("Path doesn't exists and will be created: '{}".format(dest_dir))
 
@@ -77,7 +84,7 @@ def process_transfer(args):
     if args.strava:
         strava_do_update()
 
-    if args.archive and dest_dir is not None:
+    if args.dir or args.archive:
         if not path.exists(dest_dir):
             Path(dest_dir).mkdir(parents=True, exist_ok=True)
 
@@ -85,4 +92,4 @@ def process_transfer(args):
         replace(load.file_name, dest_file)
         load.set_archived_to(dest_file)
         save_load(load)
-        print("Archived: '{}'".format(dest_file))
+        print("Archived to: '{}'".format(dest_file))

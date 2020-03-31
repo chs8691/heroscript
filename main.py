@@ -1,18 +1,17 @@
+import argparse
 import sys
 
 import utility
 from cmd_config import process_config, init_config
-from config import default_port
+from cmd_load import process_load
 from cmd_masterdata import init_masterdata_storage
 from cmd_masterdata import process_masterdata
-from cmd_transfer import process_transfer
 from cmd_set import process_set
-from cmd_load import process_load
 from cmd_show import process_show
-from velohero import velohero_process_show, velohero_process_update, velohero_process_upload
+from cmd_transfer import process_transfer
+from config import default_port
 from utility import set_log_switch, exit_on_error
-
-import argparse
+from velohero import velohero_process_show, velohero_process_update, velohero_process_upload
 
 
 def execute_velohero_upload():
@@ -87,7 +86,18 @@ def parse_args():
 
     # ######### masterdata #########
     data_parser = sub_parsers.add_parser('masterdata',
-                                         help="Set and show master data like equipment and training type.")
+                                         help="Set or show master data (equipment and training type).",
+                                         description="Set or show master data (equipment and training type)."
+                                                     "Equipments will be downloaded from Velohero and from Strava "
+                                                     "and then merged together by its name. In consequence, to use an "
+                                                     "equipment in heroscript you have to create it twice, once in "
+                                                     "velohero and once in Strava. "
+                                                     "The second master data is Training Type (Trainingsarten), "
+                                                     "imported from Velohero. To set the training type manually, use "
+                                                     "the set command. But more comfortable could be to customize it "
+                                                     "directly in your Strava activity before the load (see load "
+                                                     "command)."
+                                         )
 
     data_parser.add_argument("-l", "--list",
                              required=False,
@@ -118,11 +128,18 @@ def parse_args():
     data_parser.set_defaults(func=execute_masterdata)
 
     # ######### config #########
-    config_parser = sub_parsers.add_parser('config', help="Set and show script settings.")
+    config_parser = sub_parsers.add_parser('config',
+                                           help="Set and show script settings.",
+                                           description="Set the configuration for Heroscript. This will be stored in the "
+                                                       ".heroscript directory of the user's home directory. Some configurations"
+                                                       "will be handled by the script but there are also values the user can "
+                                                       "maintain. Calling config without paramater, all values will be listed.",
+                                           )
 
     config_parser.add_argument("-l", "--list",
                                action='store_true',
-                               help="Print all settings as a list. This is the default argument.")
+                               help="Print all settings as a list. This is the default argument.",
+                               )
 
     # For every new argument added here, cmd_config.py must be enhanced:
     #    - Define a constant key_....
@@ -166,10 +183,10 @@ def parse_args():
     config_parser.add_argument("-sd", "--strava_description",
                                required=False,
                                help="Add a description line automatically to the Strava activity, if the value condition maps. "
-                                    "Supported values for the condition are 'strava.name(TEXT TO SEARCH FOR)' "
-                                    "and training_type((TRAINING_TYPE)) followed by a questionmark '?' and the text. " 
+                                    "Supported values for the condition are 'strava_name(TEXT TO SEARCH FOR)' "
+                                    "and training_type((TRAINING_TYPE)) followed by a questionmark '?' and the text. "
                                     "The original description will be purged, if exists."
-                                    "Example 1: --strava_description=strava.name(die runden stunde)?https://www.instagram.com/explore/tags/dierundestunde/ "
+                                    "Example 1: --strava_description=strava_name(die runden stunde)?https://www.instagram.com/explore/tags/dierundestunde/ "
                                     "will add the link to the description, if the Activity name is 'Die Runden Stunde'. "
                                     "Example 2: --strava_description=training_type(pendel)?https://flic.kr/s/aHsm3QRWjT "
                                     "will create the link, if the training type is set to 'Pendel'.")
@@ -178,7 +195,8 @@ def parse_args():
 
     # ######### load #########
     load_parser = sub_parsers.add_parser('load',
-                                         description="Load an activity file from a local directory into the stage."
+                                         description="First step of the workflow: Load an activity file from a local "
+                                                     "directory into the stage."
                                                      "With no arguments, the next file from the default directory "
                                                      "will be loaded. For this the default directory must be set once "
                                                      "by velohero config --load_dir 'your_path'. Or the directory "
@@ -203,10 +221,21 @@ def parse_args():
                              help="Path to the directory which contains one or more track files. In alphanumerical order,"
                                   "the first track file will be loaded. This parameters excludes --file.")
 
+    load_parser.add_argument("-i", "--info",
+                             required=False,
+                             action='store_true',
+                             help="Prints info about the track files in the configured directory.")
+
     load_parser.set_defaults(func=execute_load)
 
     # ######### set #########
-    set_parser = sub_parsers.add_parser('set', help="Set attributes for a loaded track file")
+    set_parser = sub_parsers.add_parser('set',
+                                        help="Set attributes for a loaded track file",
+                                        description="After loading an activity file into the stash, values can be"
+                                                    "changed with the set command. This can be useful, if the activity "
+                                                    "is not proper configured in Strava. Use the show command to list"
+                                                    "the actual settings.",
+                                        )
 
     set_parser.add_argument("-at", "--activity_type",
                             required=False,
@@ -258,7 +287,10 @@ def parse_args():
     set_parser.set_defaults(func=execute_set)
 
     # ######### show #########
-    show_parser = sub_parsers.add_parser('show', help="Show actual attributes for a loaded track file")
+    show_parser = sub_parsers.add_parser('show',
+                                         help="Show actual attributes for a loaded track file",
+                                         description="Shows the values of a loaded activity."
+                                         )
 
     show_parser.add_argument("-m", "--map",
                              required=False,
@@ -268,7 +300,13 @@ def parse_args():
     show_parser.set_defaults(func=execute_show)
 
     # ######### transfer #########
-    transfer_parser = sub_parsers.add_parser('transfer', help="Upload/Update the track file with the actual setting")
+    transfer_parser = sub_parsers.add_parser('transfer',
+                                             help="Upload/Update the track file with the actual setting",
+                                             description="Finalized the workflow for a loaded activity by exporting it"
+                                                         "the specified destinations: Upload to Velohero, update "
+                                                         "Strava and moving the track file to a local archive"
+                                                         "directory.",
+                                             )
 
     transfer_parser.add_argument("-v", "--velohero",
                                  required=False,
@@ -282,9 +320,18 @@ def parse_args():
                                  help="Update STRAVA activity. The activity must exist in STRAVA and loaded with 'load --strava'")
 
     transfer_parser.add_argument("-a", "--archive",
+                                 action='store_true',
                                  required=False,
-                                 help="Move the track file to this archive directory. Supported placeholder is '{YYYY}'."
-                                      "Examples: '../archive' or '/home/chris/tracks/{YYYY}'")
+                                 help="Move the track file to the default archive directory. "
+                                      "For this it must be set once by velohero config --archive_dir 'your_path'."
+                                      "Supported placeholder is '{YYYY}'."
+                                      "Examples: config --archive_dir='../archive' or config -ad '/home/chris/tracks/{YYYY}'")
+
+    transfer_parser.add_argument("-d", "--dir",
+                                 required=False,
+                                 help="Move the track file to this archive directory. "
+                                      "Supported placeholder is '{YYYY}'."
+                                      "Examples: --dir='../archive' or -d '/home/chris/tracks/{YYYY}'")
 
     transfer_parser.set_defaults(func=execute_transfer)
 
