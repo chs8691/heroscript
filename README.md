@@ -1,5 +1,8 @@
 # heroscript
-Console tool for upload and edit activities to velohero and STRAVA.
+Console tool for upload tcx activities to velohero by merging Strava activity values.
+
+# Introducing
+
 
 # Preconditions
 
