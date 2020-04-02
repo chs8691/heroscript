@@ -3,7 +3,7 @@ from os import path
 
 import config
 from config import read_config
-from load import create_load
+from load import create_load, read_load
 from strava import load_strava_activity
 from utility import log, exit_on_error
 
@@ -32,10 +32,16 @@ def print_info():
         print("No track file found in {}".format(dir))
         return
 
+    load = read_load()
+
     print(f"Found {len(files_grabbed)} track file(s) in '{dir}':")
     for file in files_grabbed:
+        if load and file == load.file_name:
+            status = "*"
+        else:
+            status = " "
 
-        print(f"  {path.basename(file)}")
+        print(f"  {status} {path.basename(file)}")
 
 
 
