@@ -12,6 +12,8 @@ Downloading from Garmin is out of scope, I use a fork of garmin-connect-export t
 
 Heroscript is not a ready-to-use GUI application for the normal athlete. It is a tailored console script, designed for just my specific use case. But may be you have a similar constellation, so this script can help you as a starting point.
 
+![Overview](https://github.com/chs8691/heroscript/blob/master/design/Diagram.png)
+
 # Preconditions
 
 ## Python
