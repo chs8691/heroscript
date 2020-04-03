@@ -45,13 +45,66 @@ $ venv/bin/python main.py --help
 
 There are a couple of commands, but for the main use case, you just need this one:
 
-### Setup
+### Setup Commands
 * config: Settings for authorization, directories etc.
 * masterdata: Read equipments from Velohero and Strava and training types from Velohero
 
-### Activity
+### Activity Commands
 * load: Read next TCX file from the local download direcory and merge its Strava activity settings
 * transfer: Upload activity to Velohero, update Strava activity and move TCX file to the local archive directory
 
+Let's take a look at the same workflow diagram from above. But now with the heroscript commands instead of the action descriptions.
+
+![Overview](https://github.com/chs8691/heroscript/blob/master/design/commands.png)
+
+
 ### Example
-Step by step example to show how it works.
+Step by step example to show how it works. If you want to download the latest activities from Garmin in the in-directory, you can do this with ![chs8691/garmin-connect-export](https://github.com/chs8691/garmin-connect-export). This is forked from pe-st's one and can download only new activities:
+
+$ garmin-connect-export --username <YOUR-GARMIN-USER > --password <TOP-SECRET-PASSWORD> -d /home/chris/download -f tcx -s tcx -fp -c new
+ 
+This will download all new activities from Garmin Connect into your local directory '/home/chris/download'.
+
+Next, we will setup the master data.
+
+Velohero's Training Types will be used in heroscript (later on, it is shown how to set a training type in a Strava activity):
+
+![Training Types in Velohero](https://github.com/chs8691/heroscript/blob/master/design/training-types.png)
+
+To use the equipments, you have to maintain all equipments in Velohero and Strava with the same name (other ones will be ignored):
+ 
+![Equipments in Velohero and Strava](https://github.com/chs8691/heroscript/blob/master/design/equipments.png)
+
+This pairs of equipments can now be merged as master data into heroscript. Because this is the first time to connect to Strava, you have to accecpt authoriztion for the heroscript app:
+
+$ venv/bin/python main.py masterdata --refresh
+$ Collecting data from Velohero..done! From Strava..Starting webbrowser, please authorize heroscript for STRAVA access.
+Waiting 10 sec for your authorization:  0
+
+![Strava authorization for heroscript](https://github.com/chs8691/heroscript/blob/master/design/strava_authorization.png)
+
+After acception the rights, the master data will be merged:
+
+$ venv/bin/python main.py masterdata --list
+
+Now setup heroscript for download and archive directories:
+ 
+ $ venv/bin/python main.py config --load_dir=/home/chris/download/
+ $ venv/bin/python main.py config --archive_dir=/home/chris/archive/
+ 
+ If heroscript should not use the default port 4312, specify another one:
+ 
+ $ venv/bin/python main.py config --port 4313
+ 
+ For Velohero you have to set the SSO-ID:
+ 
+ $ venv/bin/python main.py config -vs feQfmIHT6IVH1GI9SD32BIhaUpwTaQguuzE7XXa2
+ 
+ 
+ 
+ 
+
+
+
+
+
