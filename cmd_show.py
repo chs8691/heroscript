@@ -104,6 +104,9 @@ def process_show(args):
 
     load = read_load()
 
+    if load is None:
+        utility.exit_on_error("No activity loaded yet.")
+
     if args.map:
         show_map()
         # print("Opening map in default Browser...", end='', flush=True)

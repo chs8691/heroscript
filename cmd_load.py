@@ -2,7 +2,6 @@ import glob
 from os import path
 
 import config
-from config import read_config
 from load import create_load, read_load
 from strava import load_strava_activity
 from utility import log, exit_on_error

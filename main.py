@@ -333,6 +333,13 @@ def parse_args():
                                       "Supported placeholder is '{YYYY}'."
                                       "Examples: --dir='../archive' or -d '/home/chris/tracks/{YYYY}'")
 
+    transfer_parser.add_argument( "--purge",
+                             required=False,
+                             help="Delete the activity and remove the load. This option can be useful to get rid of "
+                                  "double downloaded files. For security reason the filename is the parameter. "
+                                  "Be careful, this can not be undone! "
+                                  "Example: 'transfer --purge 20200403-122359.tcx'")
+
     transfer_parser.set_defaults(func=execute_transfer)
 
     # ######### velohero show #########

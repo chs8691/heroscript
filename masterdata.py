@@ -28,7 +28,7 @@ def get_types():
 
 
 # def find_type(name):
-#     """
+#     """7
 #     Returns type dictionary by name or, if not found, None
 #     Precondition: Masterdata with 'types' must exists, otherwise exit will processed
 #     :return: E.g. dict(name='Pendel', tag='commute', velohero_id='7433') or a None

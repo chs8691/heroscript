@@ -1,9 +1,9 @@
-from os import path, replace
+from os import path, replace, remove
 from pathlib import Path
 
 import config
 from config import get_config
-from load import save_load, read_load
+from load import save_load, read_load, delete_load
 from strava import strava_do_update
 from velohero import velohero_check_sso_login
 from velohero import velohero_do_update
@@ -14,10 +14,19 @@ import utility
 def process_transfer(args):
     # utility.log("process_transfer", "start")
 
-    if not args.velohero and not args.archive and not args.strava and not args.dir:
+    if not args.velohero and not args.archive and not args.strava and not args.dir and not args.purge:
         utility.exit_on_error("Missing transfer destination(s). Use --help to see possible arguments")
 
     load = read_load()
+
+    if args.purge:
+        if args.purge != path.basename(load.file_name):
+            utility.exit_on_error(f"Wrong filename. You can only purge the loaded file {path.basename(load.file_name)}")
+        else:
+            remove(load.file_name)
+            delete_load()
+            print("File and Load purged")
+            return
 
     if args.strava and load.strava_activity_id is None:
         utility.exit_on_error("STRAVA activity not loaded, so STRAVA can't be updated. If you want to update your STRAVA activity, " 

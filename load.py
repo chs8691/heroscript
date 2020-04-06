@@ -1,6 +1,6 @@
 import pickle
 from datetime import datetime
-from os import path
+from os import path, remove
 
 from storage import Storage
 from tcxparser import TCXParser
@@ -179,6 +179,14 @@ class Stage:
         self.archived_to = value
 
 
+def delete_load():
+
+    storage = Storage()
+    file = storage.get_stage_path()
+    log("file_name", file)
+
+    remove(file)
+
 
 def save_load(load):
     storage = Storage()
@@ -191,14 +199,17 @@ def save_load(load):
 
 def read_load():
     """
-    Returns the actual Stage
+    Returns the actual Stage or None
     :rtype: :class:`load.Stage`
     """
     storage = Storage()
-    filehandler = storage.get_stage_path().open('rb')
-    load = pickle.load(filehandler)
-    return load
 
+    if path.exists(storage.get_stage_path()):
+        filehandler = storage.get_stage_path().open('rb')
+        load = pickle.load(filehandler)
+        return load
+    else:
+        return None
 
 def create_load(file_name):
     """
