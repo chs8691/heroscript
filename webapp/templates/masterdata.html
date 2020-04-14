@@ -1,0 +1,34 @@
+<html>
+<head>
+    <title>{{ title }} - Heroscript Web Client</title>
+    <link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body>
+<div>
+<a href="/">
+    <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Heroscript Home">
+</a>
+</div>
+{% if context.message %}
+<div class="message">
+    {% for line in context.message %}
+    <pre><b>{{ line }}</b></pre>
+    {% endfor %}
+    {% endif %}
+</div>
+<h1>Masterdata</h1>
+What you can do here:
+<ul>
+    <li><a href="/masterdata/update">UPDATE</a> - Update masterdata from Velohero and Strava</li>
+</ul>
+
+This is the actual status:
+<div class="output">
+    {% for line in context.output %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+
+</div>
+</body>
+</html>

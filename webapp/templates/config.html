@@ -1,0 +1,66 @@
+<html>
+<head>
+    <title>{{ title }} - Heroscript Web Client</title>
+    <link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body>
+<div>
+    <a href="/">
+        <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Heroscript Home">
+    </a>
+
+</div>
+{% if context.message %}
+<div class="message">
+    {% for line in context.message %}
+    <pre><b>{{ line }}</b></pre>
+    {% endfor %}
+    {% endif %}
+</div>
+<h1>Configuration</h1>
+<p>
+    Here you can check and update the configuration.
+</p>
+
+This is the actual status:
+<div class="output">
+    {% for line in context.output %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+</div>
+
+{% block content %}
+<h1>Update</h1>
+<p>
+    Following values can be updated. The other ones are Heroscript managed.
+</p>
+<form action="" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.port.label }}<br>
+        {{ form.port(size=8) }}
+    </p>
+    <p>
+        {{ form.velohero_sso_id.label }}<br>
+        {{ form.velohero_sso_id(size=50) }}
+    </p>
+    <p>
+        {{ form.strava_client_id.label }}<br>
+        {{ form.strava_client_id(size=50) }}
+    </p>
+    <p>
+        {{ form.strava_description__BY__strava_name.label }}<br>
+        {{ form.strava_description__BY__strava_name(size='100') }}
+    </p>
+    <p>
+        {{ form.strava_description__BY__training_type.label }}<br>
+        {{ form.strava_description__BY__training_type(size='100') }}
+    </p>
+    <p>{{ form.strava_reset() }} {{ form.strava_reset.label }}</p>
+    <p>{{ form.submit() }}</p>
+</form>
+{% endblock %}
+
+</body>
+</html>

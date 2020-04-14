@@ -1,0 +1,40 @@
+<html>
+<head>
+    <title>{{ title }} - Heroscript Web Client</title>
+    <link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body>
+<div>
+<a href="/">
+    <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Heroscript Home">
+</a>
+
+</div>
+{% if context.message %}
+<div class="message">
+    {% for line in context.message %}
+    <pre><b>{{ line }}</b></pre>
+    {% endfor %}
+    {% endif %}
+</div>
+<h1>Staging</h1>
+What you can do here:
+<ul>
+    <li><a href="/load">LOAD</a> - Load next activity from local file and Strava</li>
+    <li><a href="/tansfer">TRANSFER</a> - Upload activity to Velohero, update Strava and archive track file to locale
+        directory
+    </li>
+    <li><a href="/purge">PURGE</a> - Remove activity and track file from Heroscipt (doesn't acceft Velohero and Strava)
+    </li>
+</ul>
+
+This is the actual status:
+<div class="output">
+    {% for line in context.output %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+
+</div>
+</body>
+</html>

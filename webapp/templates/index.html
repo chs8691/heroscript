@@ -1,0 +1,42 @@
+<html>
+<head>
+    <title>{{ title }} - Heroscript Web Client</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div>
+    <div>
+        <img src="http://127.0.0.1:5000/static/icon.png" width="100" alt="Heroscript">
+    </div>
+    <div>
+        <b>Welcome to Heroscript</b><br>
+    </div>
+    <div>
+        Thank you for choosing Heroscript. Use the links below to do your workflow.
+    </div>
+</div>
+
+<h2>Download Folder </h2>
+<a href="/download">DOWNLOAD</a> - Donwload latest track files from Garmin Connect
+<div class="output">
+    {% for line in context.load_info %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+</div>
+<h2>Actual Stage</h2>
+<a href="/staging">STAGING</a> - Stage next activity from local file and Strava
+<div class="output">
+    {% for line in context.show %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+</div>
+<h2>Settings</h2>
+<div>
+    <ul>
+        <li><a href="/masterdata/show">MASTERDATA</a> - Get Masterdata from Velohero and Strava</li>
+        <li><a href="/config">CONFIG</a> - Setup Heroscript</li>
+    </ul>
+</div>
+</body>
+</html>
