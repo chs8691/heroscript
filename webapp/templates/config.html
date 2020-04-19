@@ -42,10 +42,6 @@ This is the actual status:
         {{ form.port(size=8) }}
     </p>
     <p>
-        {{ form.velohero_sso_id.label }}<br>
-        {{ form.velohero_sso_id(size=50) }}
-    </p>
-    <p>
         {{ form.strava_client_id.label }}<br>
         {{ form.strava_client_id(size=50) }}
     </p>
@@ -56,6 +52,18 @@ This is the actual status:
     <p>
         {{ form.strava_description__BY__training_type.label }}<br>
         {{ form.strava_description__BY__training_type(size='100') }}
+    </p>
+    <p>
+        {{ form.velohero_sso_id.label }}<br>
+        {{ form.velohero_sso_id(size=50) }}
+    </p>
+    <p>
+        {{ form.garmin_connect_username.label }}<br>
+        {{ form.garmin_connect_username(size=50) }}
+    </p>
+    <p>
+        {{ form.garmin_connect_password.label }}<br>
+        {{ form.garmin_connect_password(size=50) }}
     </p>
     <p>{{ form.strava_reset() }} {{ form.strava_reset.label }}</p>
     <p>{{ form.submit() }}</p>

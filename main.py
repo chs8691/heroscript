@@ -9,6 +9,7 @@ from cmd_masterdata import process_masterdata
 from cmd_set import process_set
 from cmd_show import process_show
 from cmd_transfer import process_transfer
+from cmd_download import process_download
 from config import default_port
 from utility import set_log_switch, exit_on_error
 from velohero import velohero_process_show, velohero_process_update, velohero_process_upload
@@ -33,6 +34,9 @@ def execute_transfer():
 def execute_set():
     process_set(args)
 
+
+def execute_download():
+    process_download(args)
 
 def execute_config():
     process_config(args)
@@ -127,6 +131,31 @@ def parse_args():
 
     data_parser.set_defaults(func=execute_masterdata)
 
+    # ######### download #########
+    download_parser = sub_parsers.add_parser('download',
+                                             help="Download track files from Garmin Connect",
+                                             description="Download new or a specified number of activity files in TCX format. "
+                                                         "The working directory is .download. The downloaded activitiy "
+                                                         "files will be moved to the load_dir (set with 'config --load_dir'). "
+                                             )
+
+    download_parser.add_argument("-c", "--count",
+                                 required=False,
+                                 help="Specify a fixed number of latest activities to download. If not given, all "
+                                      "new activity files will be loaded. Must be used for the very first downloadb "
+                                      "to avoid downloading all existing activities from Garmin Connect. "
+                                      "Example: 'download --count 3' will load the last three activities from Garmin "
+                                      "Connect.")
+
+    download_parser.add_argument("-i", "--info",
+                             required=False,
+                             action='store_true',
+                             help="Prints info about the last download.")
+
+
+    download_parser.set_defaults(func=execute_download)
+
+
     # ######### config #########
     config_parser = sub_parsers.add_parser('config',
                                            help="Set and show script settings.",
@@ -141,6 +170,12 @@ def parse_args():
                                help="Print all settings as a list. This is the default argument.",
                                )
 
+    config_parser.add_argument("-d", "--delete",
+                               help="Delete item. Mandatory items will not be deleted but replaced by the default value."
+                                    " Examples 'config --delete strava_description__BY__strava_name' will delete the "
+                                    "item, but 'config --delete strava_client_id' will reset to default." ,
+                               )
+
     # For every new argument added here, cmd_config.py must be enhanced:
     #    - Define a constant key_....
     #    - Enhance _set_argument()
@@ -150,7 +185,7 @@ def parse_args():
                                required=False,
                                help="Set the STRAVA client ID for the used API. This can be found in STAVA / Settings / My API. "
                                     "If you havn't got alreay a created an API, you have to to this first."
-                                    "Example: --velohero_sso_id kdRfmIHT6IVH1GI9SD32BIhaUpwTaQguuzE7XYt4 ")
+                                    "Example: --strava_client_id 43527 ")
 
     config_parser.add_argument("-sr", "--strava_reset",
                                required=False,
@@ -163,6 +198,16 @@ def parse_args():
                                help="Set the velohero SSO key. "
                                     "Example: --velohero_sso_id kdRfmIHT6IVH1GI9SD32BIhaUpwTaQguuzE7XYt4 ")
 
+    config_parser.add_argument("-gu", "--garmin_connect_username",
+                               required=False,
+                               help="Garmin connect user name "
+                                    "Example: --garmin_connect_username='chris.schulzi@topbox.com' ")
+
+    config_parser.add_argument("-gp", "--garmin_connect_password",
+                               required=False,
+                               help="Garmin connect password "
+                                    "Example: --garmin_connect_password='top-secret-pASSw0rd' ")
+
     config_parser.add_argument("-p", "--port",
                                required=False,
                                help="Port for internal webserver, default is {}. Example: --port 1234"
@@ -170,7 +215,9 @@ def parse_args():
 
     config_parser.add_argument("-ld", "--load_dir",
                                required=False,
-                               help="Directory for the activity files to load. Example: --load_dir '/garmin/import/tcx'"
+                               help="Root directory for the activity files to load. This will be used to download "
+                                    "activities from Garmin. The track files will be stored in the subdirectory "
+                                    f"'{utility.load_subdir}'. Example: --load_dir '/garmin_import'"
                                )
 
     config_parser.add_argument("-ad", "--archive_dir",

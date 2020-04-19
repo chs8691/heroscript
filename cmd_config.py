@@ -7,16 +7,20 @@ from utility import log, exit_on_error
 
 import config
 
-
 def process_config(args):
     log("process_config", "start")
 
-    if args.strava_client_id or \
+    if args.delete:
+        _delete_argument(args.delete)
+
+    elif args.strava_client_id or \
             args.strava_reset or \
             args.velohero_sso_id or \
-            args.port \
-            or args.strava_description or\
+            args.port or \
+            args.strava_description or\
             args.load_dir or \
+            args.garmin_connect_username or\
+            args.garmin_connect_password or\
             args.archive_dir:
         _set_argument(args)
 
@@ -46,8 +50,12 @@ def init_config():
     myconfig = config.read_config()
 
     if config.key_port not in myconfig:
-        log("Create default key_port", config.default_port)
+        log(f"Create default {config.key_port}", config.default_port)
         config.save_item(config.key_port, config.default_port)
+
+    if config.key_load_dir not in myconfig:
+        log(f"Create default {config.key_load_dir}", config.default_load_dir)
+        config.save_item(config.key_load_dir, config.default_load_dir)
 
     if config.key_strava_client_id not in myconfig:
         log("Create default strava_client_id", config.key_strava_client_id)
@@ -64,6 +72,15 @@ def _init_config():
     # Create new config and initialize it with default values
     config._save_config(dict())
     config.save_item(config.key_port, config.default_port)
+    config.save_item(config.key_load_dir, config.default_load_dir)
+
+
+def _delete_argument(key):
+
+    if config.find(key) is None:
+        exit_on_error(f"Key '{key}' not found!")
+
+    config.delete_item(key)
 
 
 def _set_argument(args):
@@ -79,12 +96,24 @@ def _set_argument(args):
         config.save_item(config.key_port, args.port)
         cnt += 1
 
+    if args.strava_client_id:
+        config.save_item(config.key_strava_client_id, args.strava_client_id)
+        cnt += 1
+
     if args.load_dir:
         config.save_item(config.key_load_dir, args.load_dir)
         cnt += 1
 
     if args.archive_dir:
         config.save_item(config.key_archive_dir, args.archive_dir)
+        cnt += 1
+
+    if args.garmin_connect_username:
+        config.save_item(config.key_garmin_username, args.garmin_connect_username)
+        cnt += 1
+
+    if args.garmin_connect_password:
+        config.save_item(config.key_garmin_password, args.garmin_connect_password)
         cnt += 1
 
     if args.strava_reset:

@@ -9,7 +9,7 @@ from utility import log, exit_on_error
 
 def print_info():
 
-    dir = config.find(config.key_load_dir)
+    dir = config.get_download_dir()
 
     if dir is None:
         print("No load directory configured. To set,  use 'heroscript config --load_directory PATH'.")
@@ -43,7 +43,6 @@ def print_info():
         print(f"  {status} {path.basename(file)}")
 
 
-
 def process_load(args):
     log("process_load", "start")
 
@@ -58,7 +57,7 @@ def process_load(args):
         create_load(get_next_track_file(args.directory))
 
     else:
-        dir = config.find(config.key_load_dir)
+        dir = config.get_download_dir()
         if dir is None:
             exit_on_error("No load directory configured. Use 'heroscript config --load_directory PATH' or use "
                           "an optional argument '--file FILE' or '--directory DIRECTORY'.")

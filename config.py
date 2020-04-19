@@ -1,6 +1,8 @@
 # For every config item, this constant must be defined
 import pickle
+from os import path
 
+import utility
 from storage import Storage
 from utility import log, exit_on_error, warn
 
@@ -10,10 +12,15 @@ key_port = 'port'
 default_port='4312'
 
 key_load_dir = 'load_dir'
+default_load_dir = 'download'
 
 key_archive_dir = 'archive_dir'
 
 key_strava_client_id = 'strava_client_id'
+
+key_garmin_username = 'garmin_connect_username'
+
+key_garmin_password = 'garmin_connect_password'
 
 # Client ID of my STRAVA API (Christian Schulzendorff). Please, use this API only for Heroscript
 default_strava_client_id = '43527'
@@ -47,6 +54,22 @@ def save_item(key, value):
 
     _save_config(myconfig)
 
+
+def delete_item(key):
+    """
+    delete one item in the config list
+    :param item: Item to append or replace
+    """
+    myconfig = read_config()
+
+    if key in myconfig:
+        log(f"Delete setting", key)
+        myconfig.pop(key)
+
+        _save_config(myconfig)
+
+    else:
+        exit_on_error(f"'{key}' not found !")
 
 def get_strava_description_items():
     """
@@ -111,7 +134,6 @@ def get_config(key):
     else:
         exit_on_error(f"Config key '{key}' not found !")
 
-
 def read_config():
     storage = Storage()
 
@@ -121,10 +143,12 @@ def read_config():
     return config
 
 
+def get_download_dir():
+    return path.join(get_config(key_load_dir), utility.load_subdir)
+
 def _save_config(config):
     storage = Storage()
     file = storage.get_config_path()
-    # log("file_name", file)
 
     with file.open('wb') as file:
         pickle.dump(config, file)

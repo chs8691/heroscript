@@ -1,6 +1,9 @@
 import datetime
 import re
 
+# Name of the download subdirectory for activity files
+load_subdir = "in"
+
 activity_type_run = 'run'
 activity_type_mtb = 'mtb'
 activity_type_roadbike = 'roadbike'

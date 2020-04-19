@@ -1,0 +1,60 @@
+<html>
+<head>
+    <title>{{ title }} - Heroscript Web Client</title>
+    <link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body>
+<div>
+    <a href="/">
+        <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Heroscript Home">
+    </a>
+
+</div>
+{% if context.message %}
+<div class="message">
+    {% for line in context.message %}
+    <pre><b>{{ line }}</b></pre>
+    {% endfor %}
+    {% endif %}
+</div>
+<h1>Download</h1>
+<p>
+    Download activities from Garmin Connect.
+</p>
+
+This is the actual status:
+<div class="output">
+    {% for line in context.output %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+</div>
+
+{% block content %}
+<h1>Download now</h1>
+<p>
+    Normally you will download all new activites. But for the very first time, you have to download a fixed number of the latest activities.
+</p>
+<form action="" method="post" novalidate>
+                <div style = margin-left:10px;>
+
+    {{ form.hidden_tag() }}
+
+<div class="control-group">
+    {% for subfield in form.type %}
+    <label class="radio">
+        {{ subfield }} {{ subfield.label }}
+        {% if subfield.id == "type-1" %}
+            {{ form.nr_of_latest(size=3) }}
+        {% endif %}
+        <br>
+
+    </label>
+    {% endfor %}
+
+    <p>{{ form.submit() }}</p>
+</form>
+{% endblock %}
+
+</body>
+</html>
