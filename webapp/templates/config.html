@@ -11,9 +11,9 @@
     </a>
 
 </div>
-{% if context.message %}
-<div class="message">
-    {% for line in context.message %}
+{% if context.messages %}
+<div class="messages">
+    {% for line in context.messages %}
     <pre><b>{{ line }}</b></pre>
     {% endfor %}
     {% endif %}
@@ -33,10 +33,18 @@ This is the actual status:
 {% block content %}
 <h1>Update</h1>
 <p>
-    Following values can be updated. The other ones are Heroscript managed.
+    Following values can be updated. The other ones are Heroscript managed. To delete or reset to default, clear the input field.
 </p>
 <form action="" method="post" novalidate>
     {{ form.hidden_tag() }}
+    <p>
+        {{ form.load_dir.label }}<br>
+        {{ form.load_dir(size=100) }}
+    </p>
+    <p>
+        {{ form.archive_dir.label }}<br>
+        {{ form.archive_dir(size=100) }}
+    </p>
     <p>
         {{ form.port.label }}<br>
         {{ form.port(size=8) }}

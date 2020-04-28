@@ -77,7 +77,7 @@ def _download_count(count):
     with subprocess.Popen(["/home/chris/PycharmProjects/garmin-connect-export/venv/bin/python",
                            '/home/chris/PycharmProjects/garmin-connect-export/gcexport.py',
                            "--username", f"{username}" , "--password", f"{password}",
-                           "-d", load_dir, "-f", "tcx", "-s", utility.load_subdir, "-fp", "-c", f"{count}"],
+                           "-d", load_dir, "-f", "tcx", "-s", config.load_subdir, "-fp", "-c", f"{count}"],
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,
                           bufsize=1,

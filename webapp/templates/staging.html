@@ -6,35 +6,93 @@
 </head>
 <body>
 <div>
-<a href="/">
-    <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Heroscript Home">
-</a>
+    <a href="/">
+        <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Heroscript Home">
+    </a>
 
 </div>
-{% if context.message %}
-<div class="message">
-    {% for line in context.message %}
+{% if context.messages %}
+<div class="messages">
+    {% for line in context.messages %}
     <pre><b>{{ line }}</b></pre>
     {% endfor %}
     {% endif %}
 </div>
-<h1>Staging</h1>
+
+<h1>Staging </h1>
 What you can do here:
+<div class="clearfix">
+    <div class="button-line-flex-container">
+        <div class="button-line-flex-container-line">
+            <div><a href="/load" class="nav-button">LOAD</a></div>
+            <div> - Load next activity from local file and Strava</div>
+        </div>
+        {% if context.result.file %}
+        <div class="button-line-flex-container-line">
+            <div><a href="/transfer" class="nav-button">TRANSFER</a></div>
+            <div> - Upload activity to Velohero, update Strava and
+                archive track file to locale
+                directory
+            </div>
+        </div>
+        <div class="button-line-flex-container-line">
+            <div><a href="/purge" class="nav-button">PURGE</a></div>
+            <div> - Remove activity and track file from Heroscipt (doesn't
+                acceft Velohero and Strava)
+            </div>
+            </div>
+    </div>
+</div>
+{% endif %}
+</div>
+</div>
+</div>
+
+
+<h1>Status</h1>
+This is the actual status:
+{% if context.result.loaded %}
 <ul>
-    <li><a href="/load">LOAD</a> - Load next activity from local file and Strava</li>
-    <li><a href="/tansfer">TRANSFER</a> - Upload activity to Velohero, update Strava and archive track file to locale
-        directory
+    <li>
+        {% if context.result.file %}
+        Track file OK
+        {% else %}
+        ERROR Track file not found: Seems not to be the actual load. Did you already archived the file?
+        {% endif %}
     </li>
-    <li><a href="/purge">PURGE</a> - Remove activity and track file from Heroscipt (doesn't acceft Velohero and Strava)
+    <li>
+        {% if context.result.strava %}
+        Strava OK - activity ID found
+        {% else %}
+        WARNING Strava activity not found: You can transfer to Velohero but not to Strava. But check the load data,
+        before you do this.
+        {% endif %}
+    </li>
+    <li>
+        {% if context.result.velohero %}
+        WARNING Velohero Workout ID found: The activity already exists on Velohero! A transfer to Velohero would create
+        a second workout!
+        {% else %}
+        Velohero OK - This load wasn't yet transfered to Velohero. But this is no guarantee, that no workout exists in
+        Velohero.
+        {% endif %}
+    </li>
+    <li>
+        {% if context.result.archive %}
+        WARNING Archived file: Seems to be, that the track file is already archived by this load.
+        {% else %}
+        Archive OK - File not in archive directory
+        {% endif %}
     </li>
 </ul>
+{% endif %}
 
-This is the actual status:
 <div class="output">
-    {% for line in context.output %}
+    {% for line in context.result.output %}
     <pre>{{ line }}</pre>
     {% endfor %}
-
 </div>
+
+
 </body>
 </html>

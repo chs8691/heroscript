@@ -7,7 +7,70 @@ h1, h2, h3, h4, h5 {
   color: 26734d;
 }
 
+.clearfix::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+.button-line-flex-container {
+    display: flex;
+    margin-left: 0.6em;
+	flex-direction: column;
+}
 
+.button-line-flex-container-line {
+    display: flex;
+    margin: 0.8em;
+}
+.submit-button{
+    background-color: #8ed7b4;
+    text-align: center;
+    padding: 0.6em;
+    margin: 0.5em;
+    margin-left: 0px;
+    border: 1px solid;
+    border-color: #133a26;
+    border-radius: .2em;
+    font-size: 100%;
+}
+
+
+.nav-button{
+    background-color: #8ed7b4;
+    text-align: center;
+    padding: 0.6em;
+    margin: 0.5em;
+    margin-left: 0px;
+    border: 1px solid;
+    border-color: #133a26;
+    border-radius: .2em;
+}
+
+.nav-button{
+    text-decoration: none;
+}
+
+a:link.nav-button{
+    color: black;
+}
+
+a:visited.nav-button{
+    color: black;
+}
+
+a.nav-button:hover{
+    background-color: #194d33;
+    color: white;
+    border: 1px solid;
+    border-color: #38ad73;
+}
+
+a.nav-button:active{
+    background-color: #74868c;
+    color: white;
+    border: 1px solid;
+    border-color: #193167;
+}
 .output {
     background-color: 0d261a;
     color: white;
@@ -16,7 +79,7 @@ h1, h2, h3, h4, h5 {
     margin: 10px;
 }
 
-.message {
+.messages {
     color: 0d261a;
     font: bold 'Lucida Console', monospace;
     border: 5px solid #1a4c34;

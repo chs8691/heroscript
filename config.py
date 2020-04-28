@@ -2,7 +2,6 @@
 import pickle
 from os import path
 
-import utility
 from storage import Storage
 from utility import log, exit_on_error, warn
 
@@ -13,8 +12,11 @@ default_port='4312'
 
 key_load_dir = 'load_dir'
 default_load_dir = 'download'
+# Name of the download subdirectory for activity files
+load_subdir = "in"
 
 key_archive_dir = 'archive_dir'
+default_archive_dir = 'archive'
 
 key_strava_client_id = 'strava_client_id'
 
@@ -144,7 +146,7 @@ def read_config():
 
 
 def get_download_dir():
-    return path.join(get_config(key_load_dir), utility.load_subdir)
+    return path.join(get_config(key_load_dir), load_subdir)
 
 def _save_config(config):
     storage = Storage()

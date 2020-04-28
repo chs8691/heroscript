@@ -1,0 +1,67 @@
+<html>
+<head>
+    <title>{{ title }} - Heroscript Web Client</title>
+    <link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body>
+<div>
+    <a href="/staging">
+        <img src="http://127.0.0.1:5000/static/icon.png" width="50" alt="Staging">
+    </a>
+
+</div>
+
+{% if context.messages %}
+<div class="messages">
+    {% for line in context.messages %}
+    <pre><b>{{ line }}</b></pre>
+    {% endfor %}
+    {% endif %}
+</div>
+
+{% if context.result.file %}
+
+
+<h1>Transfer</h1>
+<p>
+    Here you can upload the staged activity to Velohero and Strava and move the track file the the locale archive
+    directory.
+</p>
+
+This is the staged activity:
+<div class="output">
+    {% for line in context.result.output %}
+    <pre>{{ line }}</pre>
+    {% endfor %}
+</div>
+
+<h1>Transfer now</h1>
+<p>
+    Deselect items, if you don't want to do to it by once.
+</p>
+
+{% block content %}
+<form action="" method="post" novalidate>
+    {{ form.hidden_tag() }}
+
+    <p>{{ form.velohero(class_="nav-button") }} {{ form.velohero.label }}</p>
+
+    {% if context.result.strava %}
+        <p>{{ form.strava() }} {{ form.strava.label }}</p>
+    {% endif %}
+    <p>{{ form.archive() }} {{ form.archive.label }}</p>
+    <p>{{ form.submit() }}</p>
+<!--             <p><input type = "submit" value = "SUBMIT" class="nav-button"/></p>-->
+<!--</form>-->
+{% endblock %}
+
+{% else %}
+<h1>ERROR</h1>
+
+Track file not found: Seems not to be the actual load. Did you already archived the file?
+Return to <a href="/load">STAGIING</a> and check load again.
+{% endif %}
+
+</body>
+</html>

@@ -1,25 +1,31 @@
 import re
-from os import path, scandir
 import subprocess
 import sys
-import json
-from datetime import datetime
 
-from flask import render_template
+from flask import render_template, redirect, url_for, session
 
 from webapp import app
 from webapp.configForm import ConfigForm
 from webapp.downloadForm import DownloadForm
-import config as heroscript_config
+from webapp.transferForm import TransferForm
 
 
 @app.route('/')
 @app.route('/index')
 def index():
+
+    print(f"session={session}")
+
+    if 'messages' in session:
+        messages = session['messages']       # counterpart for session
+        session['messages'] = None
+    else:
+        messages = None
+
     res_load_info = subprocess.run([sys.executable, 'main.py', 'load', '--info'], stdout=subprocess.PIPE, text=True)
 
     res_show = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
-    context = dict(load_info=format(res_load_info.stdout), show=format(res_show.stdout))
+    context = dict(load_info=format(res_load_info.stdout), show=format(res_show.stdout), messages=messages)
 
     return render_template('index.html', title='Home', context=context)
 
@@ -27,7 +33,18 @@ def index():
 @app.route('/staging')
 def staging():
     res = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
-    context = dict(output=format(res.stdout))
+
+    # print(f"session={session}")
+    if 'messages' in session:
+        messages = session['messages']       # counterpart for session
+        session['messages'] = None
+    else:
+        messages = None
+
+    result=get_show_output(res.stdout)
+    # print(f"result={result}")
+    print(result)
+    context = dict(result=result, messages=messages)
 
     return render_template('staging.html', title='Staging', context=context)
 
@@ -36,14 +53,18 @@ def staging():
 def load():
     res_load = subprocess.run([sys.executable, 'main.py', 'load', '--strava'], stdout=subprocess.PIPE, text=True)
     res_status = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
-    context = dict(message=format(res_load.stdout), output=format(res_status.stdout))
+    context = dict(messages=format(res_load.stdout), result=get_show_output(res_status.stdout))
 
     return render_template('staging.html', title='Staging', context=context)
 
 
+@app.route('/purge')
+def purge():
+    return render_template('purge.html', title='Purge', context=None)
+
+
 @app.route('/download', methods=['GET', 'POST'])
 def download():
-
     res = subprocess.run([sys.executable, 'main.py', 'download', '--info'], stdout=subprocess.PIPE, text=True)
     output = format(res.stdout)
 
@@ -53,20 +74,20 @@ def download():
         default = "L"
 
     form = DownloadForm(type=default,
-                        nr_of_latest = 5,)
+                        nr_of_latest=5, )
 
-    message = []
+    messages = []
     if form.is_submitted():
         err = False
 
         if form.validate():
 
             if form.type == "L" and not form.nr_of_latest > 0:
-                message.append("L wrong")
-                message.append("Missing number of activities !")
+                messages.append("L wrong")
+                messages.append("Missing number of activities !")
                 err = True
             else:
-                print(f"form.type={form.type.data}")
+                # print(f"form.type={form.type.data}")
                 if form.type.data == "L":
                     args = [sys.executable, 'main.py', 'download', '--count', str(form.nr_of_latest.data)]
                 else:
@@ -74,76 +95,108 @@ def download():
 
                 print(f"args={args}")
                 with subprocess.Popen(args,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,
-                                     universal_newlines=True,
-                                     text=True) as p:
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE,
+                                      universal_newlines=True,
+                                      text=True) as p:
 
                     # Doesn't flush for garmin but flushs for pings. Why?
                     for line in p.stdout:
                         print(line, end='', flush=True)
-                        message.append(line)
+                        messages.append(line)
 
                     # Print the rest
                     for line in p.stdout.readlines():
                         print(line)
-                        message.append(line)
+                        messages.append(line)
 
                     # Print the rest
                     for line in p.stderr.readlines():
                         print(line)
-                        message.append(line)
+                        messages.append(line)
 
                 print("done")
-                res = subprocess.run([sys.executable, 'main.py', 'download', '--info'], stdout=subprocess.PIPE, text=True)
+                res = subprocess.run([sys.executable, 'main.py', 'download', '--info'], stdout=subprocess.PIPE,
+                                     text=True)
                 output = format(res.stdout)
 
         else:
             err = True
             for fieldName, errorMessages in form.errors.items():
                 for err in errorMessages:
-                    message.append(f"{fieldName}: '{err}'")
+                    messages.append(f"{fieldName}: '{err}'")
 
-    context = dict(output = output, message=message)
+    context = dict(output=output, messages=messages)
 
     return render_template('download.html', title='Donwload', form=form, context=context)
 
 
 @app.route('/config', methods=['GET', 'POST'])
 def config():
-
     res = subprocess.run([sys.executable, 'main.py', 'config', '--list'], stdout=subprocess.PIPE, text=True)
     data = format_config_list(res.stdout)
 
-
     form = ConfigForm(port=data['port'],
+                      archive_dir=data['archive_dir'],
+                      load_dir=data['load_dir'],
                       velohero_sso_id=data['velohero_sso_id'],
                       strava_client_id=data['strava_client_id'],
-                      garmin_connect_username = data['garmin_connect_username'],
-                      garmin_connect_password = data['garmin_connect_password'],
+                      garmin_connect_username=data['garmin_connect_username'],
+                      garmin_connect_password=data['garmin_connect_password'],
                       strava_description__BY__strava_name=data['strava_description__BY__strava_name'],
                       strava_description__BY__training_type=data['strava_description__BY__training_type'],
                       strava_reset=False
                       )
 
-    message = []
+    messages = []
     if form.is_submitted():
         err = False
 
         if form.validate():
+            if form.archive_dir.data != data['archive_dir']:
+                if len(form.archive_dir.data) == 0:
+                    ret = subprocess.run(
+                        [sys.executable, 'main.py', 'config', '--delete', 'archive_dir'],
+                        stdout=subprocess.PIPE, text=True)
+                    if ret.returncode != 0:
+                        messages.append(f"Delete 'archive_dir' failed !")
+                        err = True
+                else:
+                    ret = subprocess.run(
+                        [sys.executable, 'main.py', 'config', '--archive_dir', str(form.archive_dir.data)],
+                        stdout=subprocess.PIPE, text=True)
+                    if ret.returncode != 0:
+                        messages.append(f"Update 'archive_dir' failed !")
+                        err = True
+
+            if form.load_dir.data != data['load_dir']:
+                if len(form.load_dir.data) == 0:
+                    ret = subprocess.run(
+                        [sys.executable, 'main.py', 'config', '--delete', 'load_dir'],
+                        stdout=subprocess.PIPE, text=True)
+                    if ret.returncode != 0:
+                        messages.append(f"Delete 'load_dir' failed !")
+                        err = True
+                else:
+                    ret = subprocess.run([sys.executable, 'main.py', 'config', '--load_dir', str(form.load_dir.data)],
+                                         stdout=subprocess.PIPE, text=True)
+                    if ret.returncode != 0:
+                        messages.append(f"Update 'load_dir' failed !")
+                        err = True
+
             if form.port.data != data['port']:
                 if form.port.data < 1:
                     ret = subprocess.run(
                         [sys.executable, 'main.py', 'config', '--delete', 'port'],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Delete 'port' failed !")
+                        messages.append(f"Delete 'port' failed !")
                         err = True
                 else:
                     ret = subprocess.run([sys.executable, 'main.py', 'config', '--port', str(form.port.data)],
                                          stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Update 'port' failed !")
+                        messages.append(f"Update 'port' failed !")
                         err = True
 
             if form.velohero_sso_id.data != data['velohero_sso_id']:
@@ -152,14 +205,14 @@ def config():
                         [sys.executable, 'main.py', 'config', '--delete', 'velohero_sso_id'],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Delete 'velohero_sso_id    ' failed !")
+                        messages.append(f"Delete 'velohero_sso_id    ' failed !")
                         err = True
                 else:
                     ret = subprocess.run(
                         [sys.executable, 'main.py', 'config', '--velohero_sso_id', str(form.velohero_sso_id.data)],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Update 'velohero_sso_id' failed !")
+                        messages.append(f"Update 'velohero_sso_id' failed !")
                         err = True
 
             if form.garmin_connect_username.data != data['garmin_connect_username']:
@@ -168,14 +221,15 @@ def config():
                         [sys.executable, 'main.py', 'config', '--delete', 'garmin_connect_username'],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Delete 'garmin_connect_username    ' failed !")
+                        messages.append(f"Delete 'garmin_connect_username    ' failed !")
                         err = True
                 else:
                     ret = subprocess.run(
-                        [sys.executable, 'main.py', 'config', '--garmin_connect_username', str(form.garmin_connect_username.data)],
+                        [sys.executable, 'main.py', 'config', '--garmin_connect_username',
+                         str(form.garmin_connect_username.data)],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Update 'garmin_connect_username' failed !")
+                        messages.append(f"Update 'garmin_connect_username' failed !")
                         err = True
 
             if form.garmin_connect_password.data != data['garmin_connect_password']:
@@ -184,26 +238,25 @@ def config():
                         [sys.executable, 'main.py', 'config', '--delete', 'garmin_connect_password'],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Delete 'garmin_connect_password    ' failed !")
+                        messages.append(f"Delete 'garmin_connect_password    ' failed !")
                         err = True
                 else:
                     ret = subprocess.run(
-                        [sys.executable, 'main.py', 'config', '--garmin_connect_password', str(form.garmin_connect_password.data)],
+                        [sys.executable, 'main.py', 'config', '--garmin_connect_password',
+                         str(form.garmin_connect_password.data)],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Update 'garmin_connect_password' failed !")
+                        messages.append(f"Update 'garmin_connect_password' failed !")
                         err = True
-
-
 
             if form.strava_description__BY__strava_name.data != data['strava_description__BY__strava_name']:
                 value = None
                 if len(form.strava_description__BY__strava_name.data) > 0:
                     if form.strava_description__BY__strava_name.data.count("?") == 1:
-                        parts = form.strava_description__BY__strava_name.data.split("?",1)
+                        parts = form.strava_description__BY__strava_name.data.split("?", 1)
                         value = f"strava_name({parts[0]})?{parts[1]}"
                     else:
-                        message.append(f"'strava_description__BY__strava_name': Invalid value !")
+                        messages.append(f"'strava_description__BY__strava_name': Invalid value !")
                         err = True
                 else:
                     value = ""
@@ -215,7 +268,7 @@ def config():
                             [sys.executable, 'main.py', 'config', '--delete', 'strava_description__BY__strava_name'],
                             stdout=subprocess.PIPE, text=True)
                         if ret.returncode != 0:
-                            message.append(f"Delete 'strava_description__BY__strava_name' failed !")
+                            messages.append(f"Delete 'strava_description__BY__strava_name' failed !")
                             err = True
 
                     else:
@@ -223,17 +276,17 @@ def config():
                             [sys.executable, 'main.py', 'config', '--strava_description', value],
                             stdout=subprocess.PIPE, text=True)
                         if ret.returncode != 0:
-                            message.append(f"Update 'strava_description__BY__strava_name' failed !")
+                            messages.append(f"Update 'strava_description__BY__strava_name' failed !")
                             err = True
 
             if form.strava_description__BY__training_type.data != data['strava_description__BY__training_type']:
                 value = None
                 if len(form.strava_description__BY__training_type.data) > 0:
                     if form.strava_description__BY__training_type.data.count("?") == 1:
-                        parts = form.strava_description__BY__training_type.data.split("?",1)
+                        parts = form.strava_description__BY__training_type.data.split("?", 1)
                         value = f"training_type({parts[0]})?{parts[1]}"
                     else:
-                        message.append(f"'strava_description__BY__training_type': Invalid value !")
+                        messages.append(f"'strava_description__BY__training_type': Invalid value !")
                         err = True
                 else:
                     value = ""
@@ -245,7 +298,7 @@ def config():
                             [sys.executable, 'main.py', 'config', '--delete', 'strava_description__BY__training_type'],
                             stdout=subprocess.PIPE, text=True)
                         if ret.returncode != 0:
-                            message.append(f"Delete 'strava_description__BY__training_type' failed !")
+                            messages.append(f"Delete 'strava_description__BY__training_type' failed !")
                             err = True
 
                     else:
@@ -253,9 +306,8 @@ def config():
                             [sys.executable, 'main.py', 'config', '--strava_description', value],
                             stdout=subprocess.PIPE, text=True)
                         if ret.returncode != 0:
-                            message.append(f"Update 'strava_description__BY__training_type' failed !")
+                            messages.append(f"Update 'strava_description__BY__training_type' failed !")
                             err = True
-
 
             # print(f"form.strava_client_id.data={form.strava_client_id.data}, data={data['strava_client_id']}")
             if form.strava_client_id.data != data['strava_client_id']:
@@ -264,31 +316,31 @@ def config():
                         [sys.executable, 'main.py', 'config', '--strava_client_id', form.strava_client_id.data],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Update 'strava_client_id' failed !")
+                        messages.append(f"Update 'strava_client_id' failed !")
                         err = True
                 else:
                     ret = subprocess.run(
                         [sys.executable, 'main.py', 'config', '--delete', 'strava_client_id'],
                         stdout=subprocess.PIPE, text=True)
                     if ret.returncode != 0:
-                        message.append(f"Delete 'strava_client_id' failed !")
+                        messages.append(f"Delete 'strava_client_id' failed !")
                         err = True
 
             if form.strava_reset.data:
                 ret = subprocess.run([sys.executable, 'main.py', 'config', '--strava_reset'],
                                      stdout=subprocess.PIPE, text=True)
                 if ret.returncode != 0:
-                    message.append("Strava reset failed !")
+                    messages.append("Strava reset failed !")
                     err = True
 
         else:
             err = True
             for fieldName, errorMessages in form.errors.items():
                 for err in errorMessages:
-                    message.append(f"{fieldName}: '{err}'")
+                    messages.append(f"{fieldName}: '{err}'")
 
         if err is False:
-            message.append("Saved !")
+            messages.append("Saved !")
             res = subprocess.run([sys.executable, 'main.py', 'config', '--list'], stdout=subprocess.PIPE, text=True)
 
     # Data can be set to default value, so read again
@@ -296,11 +348,13 @@ def config():
     context = dict(output=format(res.stdout))
 
     if form.is_submitted():
-        context['message'] = message
+        context['messages'] = messages
 
     data = format_config_list(res.stdout)
 
     form.port.data = data['port']
+    form.archive_dir.data = data['archive_dir']
+    form.load_dir.data = data['load_dir']
     form.velohero_sso_id.data = data['velohero_sso_id']
     form.strava_client_id.data = data['strava_client_id']
     form.garmin_connect_username.data = data['garmin_connect_username']
@@ -313,6 +367,68 @@ def config():
     # print(f"form={form.garmin_connect_username}")
 
     return render_template('config.html', title='Config', form=form, context=context)
+
+
+@app.route('/transfer', methods=['GET', 'POST'])
+def transfer():
+    print("Transfer")
+    res = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
+    result=get_show_output(res.stdout)
+    context = dict(result=result)
+
+    form = TransferForm(velohero=result['velohero'] == False,
+                        strava=result['strava'],
+                        archive= result['archived'] == False,
+                        )
+
+    messages = []
+    if form.is_submitted():
+        err = False
+
+        if form.validate():
+            pass
+            if form.velohero.data:
+                ret = subprocess.run([sys.executable, 'main.py', 'transfer', '--velohero'],
+                                     stdout=subprocess.PIPE, text=True)
+                if ret.returncode == 0:
+                    messages.append("Velohero uploaded.")
+                else:
+                    messages.append("Velohero upload failed !")
+                    err = True
+
+            if form.strava.data:
+                ret = subprocess.run([sys.executable, 'main.py', 'transfer', '--strava'],
+                                     stdout=subprocess.PIPE, text=True)
+                if ret.returncode == 0:
+                    messages.append("Strava uploaded.")
+                else:
+                    messages.append("Strava upload failed !")
+                    err = True
+
+            if form.archive.data:
+                ret = subprocess.run([sys.executable, 'main.py', 'transfer', '--archive'],
+                                     stdout=subprocess.PIPE, text=True)
+                if ret.returncode == 0:
+                    messages.append("Track file archived.")
+                else:
+                    messages.append("Failed to archive the track file !")
+                    err = True
+
+        else:
+            err = True
+            for fieldName, errorMessages in form.errors.items():
+                for err in errorMessages:
+                    messages.append(f"{fieldName}: '{err}'")
+
+        session['messages'] = messages
+
+        res_load_info = subprocess.run([sys.executable, 'main.py', 'load', '--info'], stdout=subprocess.PIPE, text=True)
+        if res_load_info.stdout.strip().startswith("No track file found in "):
+            return redirect(url_for('index') )
+        else:
+            return redirect(url_for('staging') )
+
+    return render_template('transfer.html', title='Transfer', form=form, context=context)
 
 
 @app.route('/masterdata/show')
@@ -330,14 +446,15 @@ def masterdata_update():
                                  text=True)
     res_list = subprocess.run([sys.executable, 'main.py', 'masterdata', '--list'], stdout=subprocess.PIPE, text=True)
 
-    context = dict(output=format(res_list.stdout), message=format(res_refresh.stdout))
+    context = dict(output=format(res_list.stdout), messages=format(res_refresh.stdout))
 
     return render_template('masterdata.html', title='Masterdata', context=context)
 
 
 def format_config_list(text):
     """"
-    Returns a dictionary with key value pairs and one special key 'descriptions' with a list
+    Returns a dictionary with key value pairs and special keys for
+        - List of Strings 'descriptions'
     """
     ret = dict()
 
@@ -360,3 +477,49 @@ def format(text):
     Returns a list with lines
     """
     return text.split("\n")
+
+
+def get_show_output(text):
+    """"
+    Returns a dict with:
+        - List of Strings 'output'
+        - Boolean 'file' with false, if file not found. Otherwise true
+        - Boolean 'velohero' with false, if there is no ID. Otherwise true
+        - Boolean 'strava' with false, if there is no ID. Otherwise true
+        - Boolean 'archived' with false, if not archived. Otherwise true
+        - Boolean 'loaded' with false, if no Load exists
+    """
+    ret = dict()
+
+    ret['output'] = format(text)
+
+    # print(f"text={text}")
+    if text.strip().startswith('No activity loaded yet.'):
+        ret['file'] = False
+        ret['strava'] = False
+        ret['velohero'] = False
+        ret['archived'] = False
+        ret['loaded'] = False
+        return ret
+
+    ret['loaded'] = True
+    for line in format(text):
+        if ": " in line:
+            (key, value) = line.split(": ", 1)
+
+            if key.strip().lower() == "file name":
+                ret['file'] = (re.match(".*MISSING.*", value) is None)
+                print(f"check file name={ret['file']}")
+
+            elif key.strip().lower() == "activity id":
+                ret['strava'] = value.lower().strip() != 'none'
+
+            elif key.strip().lower() == "velohero workout id":
+                ret['velohero'] = value.lower().strip() != 'none'
+
+            elif key.strip().lower() == "archived to":
+                ret['archived'] = value.lower().strip() != 'none'
+
+    # print(f"ret={ret}")
+
+    return ret

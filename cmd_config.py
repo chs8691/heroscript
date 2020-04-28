@@ -80,7 +80,19 @@ def _delete_argument(key):
     if config.find(key) is None:
         exit_on_error(f"Key '{key}' not found!")
 
-    config.delete_item(key)
+    elif key == config.key_load_dir:
+        config.save_item(key, config.default_load_dir)
+        reset = True
+
+    elif key == config.key_archive_dir:
+        config.save_item(key, config.default_archive_dir)
+        reset = True
+
+    else:
+        config.delete_item(key)
+
+    if reset:
+        print(f"{key} resetted.")
 
 
 def _set_argument(args):

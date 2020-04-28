@@ -10,7 +10,7 @@ from cmd_set import process_set
 from cmd_show import process_show
 from cmd_transfer import process_transfer
 from cmd_download import process_download
-from config import default_port
+import config
 from utility import set_log_switch, exit_on_error
 from velohero import velohero_process_show, velohero_process_update, velohero_process_upload
 
@@ -210,21 +210,25 @@ def parse_args():
 
     config_parser.add_argument("-p", "--port",
                                required=False,
-                               help="Port for internal webserver, default is {}. Example: --port 1234"
-                               .format(default_port))
+                               help="Port for internal webserver to show a map, default is {}. Example: --port 1234"
+                               .format(config.default_port))
 
     config_parser.add_argument("-ld", "--load_dir",
                                required=False,
-                               help="Root directory for the activity files to load. This will be used to download "
+                               help=f"Change the root directory for the activity files to load, default is "
+                                    f"'{config.default_load_dir}'. This will be used to download "
                                     "activities from Garmin. The track files will be stored in the subdirectory "
-                                    f"'{utility.load_subdir}'. Example: --load_dir '/garmin_import'"
+                                    f"'{config.load_subdir}'. Example: --load_dir '/garmin_import'. "
+                                    "Use '--delete load_dir' to reset to default."
                                )
 
     config_parser.add_argument("-ad", "--archive_dir",
                                required=False,
-                               help="Default directory to transfer the track file to this archive directory. "
+                               help="Change the directory to transfer the track file to a archive directory, default is "
+                                    f"'{config.default_archive_dir}'. "
                                     "Supported placeholder is '{YYYY}'."
-                                    "Examples: '../archive' or '/home/chris/tracks/{YYYY}'"
+                                    "Examples: '../archive' or '/home/chris/tracks/{YYYY}'. "
+                                    "Use '--delete archvie_dir' to reset to default."
                                )
 
     config_parser.add_argument("-sd", "--strava_description",

@@ -100,5 +100,5 @@ def process_transfer(args):
         utility.log("os.replace from {} to".format(load.file_name), dest_dir)
         replace(load.file_name, dest_file)
         load.set_archived_to(dest_file)
-        save_load(load)
+        delete_load()
         print("Archived to: '{}'".format(dest_file))
