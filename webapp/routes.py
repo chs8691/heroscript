@@ -2,19 +2,41 @@ import re
 import subprocess
 import sys
 
-from flask import render_template, redirect, url_for, session
+from flask import render_template, redirect, url_for, session, make_response, request
 
+import strava
 from webapp import app
 from webapp.configForm import ConfigForm
 from webapp.downloadForm import DownloadForm
 from webapp.transferForm import TransferForm
 
+@app.route('/authenticate-strava', methods=['GET', 'POST'])
+def authenticate_strava():
+    session.clear()
+    base_url = strava.get_strava_authorization_url(request.url_root)
+    print(f"Redirection to url={base_url}")
+
+    response = make_response(redirect(base_url, 302))
+    return response
 
 @app.route('/')
 @app.route('/index')
 def index():
 
-    print(f"session={session}")
+    print(f"index() session={session}\n request={request}")
+
+    #if a code is being returned from authorization
+    if request.args.get('code'):
+        strava_code = request.args.get('code')
+        print(f"New Strava code={strava_code}")
+        #take code and convert to token
+        strava.obtain_new_token(strava_code)
+
+    # if this is the user's first visit, load page for authentication
+    if strava.need_strava_authorization():
+        print("App needs to be authorized by Strava")
+        return redirect(url_for('authenticate_strava'))
+
 
     if 'messages' in session:
         messages = session['messages']       # counterpart for session
@@ -28,6 +50,14 @@ def index():
     context = dict(load_info=format(res_load_info.stdout), show=format(res_show.stdout), messages=messages)
 
     return render_template('index.html', title='Home', context=context)
+
+
+@app.route('/authenticate', methods=['GET', 'POST'])
+def auth():
+    session.clear()
+    base_url = strava.get_strava_authorization_url(request.url_root)
+    response = make_response(redirect(base_url, 302))
+    return response
 
 
 @app.route('/staging')
@@ -51,6 +81,12 @@ def staging():
 
 @app.route('/load')
 def load():
+
+    # # Ensure that app is authorized at Strava
+    # if strava.need_strava_authorization():
+    #     url = strava.get_strava_authorization_url(url_for("/authorize"))
+
+
     res_load = subprocess.run([sys.executable, 'main.py', 'load', '--strava'], stdout=subprocess.PIPE, text=True)
     res_status = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
     context = dict(messages=format(res_load.stdout), result=get_show_output(res_status.stdout))

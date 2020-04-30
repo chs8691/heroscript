@@ -408,10 +408,7 @@ def _setup_client():
     :return: Client object
     """
 
-    # For the very first time or after config --strava_reset
-    if key_strava_expired_at not in read_config() or not get_config(key_strava_expired_at) \
-            or key_strava_access_token not in read_config() or not get_config(key_strava_access_token) \
-            or key_strava_refresh_token not in read_config() or not get_config(key_strava_refresh_token):
+    if need_strava_authorization():
         _authorize_app()
 
     # An access_token is only valid for 6 hours
@@ -426,7 +423,29 @@ def _setup_client():
     return client
 
 
-def _authorize_app():
+def need_strava_authorization():
+    """
+    Checks, if Strava authorization has to be done. This has to be done for the very first time or after
+    config --strava_reset
+    :return: true, if needed, otherwise false
+    """
+    return key_strava_expired_at not in read_config() or not get_config(key_strava_expired_at) \
+            or key_strava_access_token not in read_config() or not get_config(key_strava_access_token) \
+            or key_strava_refresh_token not in read_config() or not get_config(key_strava_refresh_token)
+
+
+def get_strava_authorization_url(redirect_uri):
+    """
+    Returns authorization URL from STRAVA
+    :param redirect_uri URI for redirection
+    :return: String with url
+    """
+    return stravalib.Client().authorization_url(client_id=get_config(key_strava_client_id),
+                                   redirect_uri=redirect_uri,
+                                   scope=['profile:read_all', 'activity:write', 'activity:read', 'activity:read_all'])
+
+
+def  _authorize_app():
     log("_authorize_app", "start")
 
     dameon = threading.Thread(name='herscript-server', target=_start_server)
@@ -435,9 +454,7 @@ def _authorize_app():
     dameon.start()
 
     client = stravalib.Client()
-    url = client.authorization_url(client_id=get_config(key_strava_client_id),
-                                   redirect_uri='http://{}:{}/authorize'.format(host_name, get_config(key_port)),
-                                   scope=['profile:read_all', 'activity:write', 'activity:read', 'activity:read_all'])
+    url = get_strava_authorization_url('http://{}:{}/authorize'.format(host_name, get_config(key_port)))
 
     # url = "https://www.strava.com/oauth/authorize?client_id={client_id}"\
     #       "&redirect_uri=http://{host_name}:{port}"\
@@ -479,12 +496,22 @@ def _authorize_app():
         exit_on_error(
             "STRAVA client secret not set. Set it with: heroscript config --strava_client_secret SECRET-OF-YOUR-API")
 
+    obtain_new_token(threaded_authorize_code)
+
+    log("_authorize_app", "end")
+
+
+def obtain_new_token(code):
+    """
+    New token was obtained from Strava
+    :param code: new code
+    """
+
+    client = stravalib.Client()
     _obtain_new_token(lambda token: client.exchange_code_for_token(client_id=get_config(key_strava_client_id),
                                                                    client_secret=get_config(key_strava_client_secret),
                                                                    code=token),
-                      threaded_authorize_code)
-
-    log("_authorize_app", "end")
+                      code)
 
 
 def _obtain_new_token(func, token):
