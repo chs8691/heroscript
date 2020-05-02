@@ -24,10 +24,9 @@
 {% if context.result.file %}
 
 
-<h1>Transfer</h1>
+<h1>Purge</h1>
 <p>
-    Here you can upload the staged activity to Velohero and Strava and move the track file the the locale archive
-    directory.
+    Delete the actual loaded activity file '{{ context.filename }}' from your local download folder.
 </p>
 
 This is the staged activity:
@@ -37,33 +36,22 @@ This is the staged activity:
     {% endfor %}
 </div>
 
-<h1>Transfer now</h1>
-<p>
-    Deselect items, if you don't want to do to it by once.
-</p>
+<h1>Delete now</h1>
 
 {% block content %}
 <form action="" method="post" novalidate>
     {{ form.hidden_tag() }}
 
-    <p>{{ form.velohero(class_="nav-button") }} {{ form.velohero.label }}</p>
-
-    {% if context.result.strava %}
-    <p>{{ form.strava() }} {{ form.strava.label }}</p>
-    {% endif %}
-    <p>{{ form.archive() }} {{ form.archive.label }}</p>
     <p>{{ form.submit() }}</p>
 
     {% endblock %}
 
+{% else %}
+<h1>ERROR</h1>
 
-    {% else %}
-    <h1>ERROR</h1>
-
-    Track file not found: Seems not to be the actual load. Did you already archived the file?
-    Return to <a href="/load">STAGIING</a> and check load again.
-
-    {% endif %}
+Track file not found: Seems not to be the actual load. Did you already archived the file?
+Return to <a href="/load">STAGIING</a> and check load again.
+{% endif %}
 
 </body>
 </html>

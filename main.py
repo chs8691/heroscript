@@ -224,10 +224,11 @@ def parse_args():
 
     config_parser.add_argument("-ad", "--archive_dir",
                                required=False,
-                               help="Change the directory to transfer the track file to a archive directory, default is "
-                                    f"'{config.default_archive_dir}'. "
+                               help="Change the directory path to transfer the track file to a archive directory, default is "
+                                    f"'{config.default_archive_dir}'. FTP upload is supported."
                                     "Supported placeholder is '{YYYY}'."
-                                    "Examples: '../archive' or '/home/chris/tracks/{YYYY}'. "
+                                    "Examples: '../archive' or '/home/chris/tracks/{YYYY}' or, for FTP: "
+                                    "'use ftp host=192.168.178.30 username=hugo password=topsecrectpassword dir=/home/chris/tracks/{YYYY}'. "
                                     "Use '--delete archvie_dir' to reset to default."
                                )
 

@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import sys
@@ -8,6 +9,7 @@ import strava
 from webapp import app
 from webapp.configForm import ConfigForm
 from webapp.downloadForm import DownloadForm
+from webapp.purgeForm import PurgeForm
 from webapp.transferForm import TransferForm
 
 @app.route('/authenticate-strava', methods=['GET', 'POST'])
@@ -64,7 +66,9 @@ def auth():
 def staging():
     res = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
 
-    # print(f"session={session}")
+    print(f"session={session}")
+    print(f"request={request}")
+
     if 'messages' in session:
         messages = session['messages']       # counterpart for session
         session['messages'] = None
@@ -73,7 +77,6 @@ def staging():
 
     result=get_show_output(res.stdout)
     # print(f"result={result}")
-    print(result)
     context = dict(result=result, messages=messages)
 
     return render_template('staging.html', title='Staging', context=context)
@@ -92,11 +95,6 @@ def load():
     context = dict(messages=format(res_load.stdout), result=get_show_output(res_status.stdout))
 
     return render_template('staging.html', title='Staging', context=context)
-
-
-@app.route('/purge')
-def purge():
-    return render_template('purge.html', title='Purge', context=None)
 
 
 @app.route('/download', methods=['GET', 'POST'])
@@ -404,6 +402,44 @@ def config():
 
     return render_template('config.html', title='Config', form=form, context=context)
 
+@app.route('/purge', methods=['GET', 'POST'])
+def purge_file():
+    print("Purge")
+    res = subprocess.run([sys.executable, 'main.py', 'show'], stdout=subprocess.PIPE, text=True)
+    result=get_show_output(res.stdout)
+
+    messages = []
+
+    # print(f"result={result}")
+    if not result['file']:
+        messages.append("Purge failed: file not found !")
+        return redirect(url_for('staging'))
+
+    filename = os.path.basename(result['output'][0].split(": ")[1].strip())
+    print(f"filename={filename}")
+    context = dict(result=result, filename=filename)
+
+    form = PurgeForm()
+
+    if form.is_submitted():
+        err = False
+
+        ret = subprocess.run([sys.executable, 'main.py', 'transfer',  '--purge', filename],
+                             stdout=subprocess.PIPE, text=True)
+        if ret.returncode == 0:
+            messages.append("Track file deleted.")
+        else:
+            messages.append(f"Failed to delete the track file '{filename}'!")
+            messages.append(ret.stdout)
+            err = True
+
+        session['messages'] = messages
+
+        return redirect(url_for('staging') )
+
+    return render_template('purge.html', title='Purge', form=form, context=context)
+
+
 
 @app.route('/transfer', methods=['GET', 'POST'])
 def transfer():
@@ -422,7 +458,6 @@ def transfer():
         err = False
 
         if form.validate():
-            pass
             if form.velohero.data:
                 ret = subprocess.run([sys.executable, 'main.py', 'transfer', '--velohero'],
                                      stdout=subprocess.PIPE, text=True)
@@ -445,7 +480,7 @@ def transfer():
                 ret = subprocess.run([sys.executable, 'main.py', 'transfer', '--archive'],
                                      stdout=subprocess.PIPE, text=True)
                 if ret.returncode == 0:
-                    messages.append("Track file archived.")
+                    messages.append(ret.stdout)
                 else:
                     messages.append("Failed to archive the track file !")
                     err = True
@@ -515,7 +550,7 @@ def format(text):
     return text.split("\n")
 
 
-def get_show_output(text):
+def     get_show_output(text):
     """"
     Returns a dict with:
         - List of Strings 'output'
