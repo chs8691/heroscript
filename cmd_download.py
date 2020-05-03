@@ -69,15 +69,11 @@ def _download_count(count):
     load_dir = config.get_config(config.key_load_dir)
 
     gce_script = path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'garmin-connect-export', 'gcexport.py')
-    gce_py = path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'garmin-connect-export','venv', 'bin', 'python')
 
     if not os.path.exists(gce_script):
         exit_on_error(f"Script not found: {gce_script} !")
 
-    if not os.path.exists(gce_py):
-        exit_on_error(f"Python (venv) not found: {gce_py} !")
-
-    with subprocess.Popen([gce_py,
+    with subprocess.Popen(['python2',
                            gce_script,
                            "--username", f"{username}" , "--password", f"{password}",
                            "-d", load_dir, "-f", "tcx", "-s", config.load_subdir, "-fp", "-c", f"{count}"],
