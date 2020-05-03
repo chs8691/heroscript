@@ -5,6 +5,7 @@ import subprocess
 import sys
 from datetime import datetime
 from os import path
+from pathlib import Path
 
 import config
 import utility
@@ -67,15 +68,17 @@ def _download_count(count):
 
     load_dir = config.get_config(config.key_load_dir)
 
-    # with subprocess.Popen(["ping", "www.google.de", "-w", "5"],
-    #                            stdout=subprocess.PIPE,
-    #                            stderr=subprocess.PIPE,
-    #                            bufsize=1,
-    #                            text=True) as p:
+    gce_script = path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'garmin-connect-export', 'gcexport.py')
+    gce_py = path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'garmin-connect-export','venv', 'bin', 'python')
 
+    if not os.path.exists(gce_script):
+        exit_on_error(f"Script not found: {gce_script} !")
 
-    with subprocess.Popen(["/home/chris/PycharmProjects/garmin-connect-export/venv/bin/python",
-                           '/home/chris/PycharmProjects/garmin-connect-export/gcexport.py',
+    if not os.path.exists(gce_py):
+        exit_on_error(f"Python (venv) not found: {gce_py} !")
+
+    with subprocess.Popen([gce_py,
+                           gce_script,
                            "--username", f"{username}" , "--password", f"{password}",
                            "-d", load_dir, "-f", "tcx", "-s", config.load_subdir, "-fp", "-c", f"{count}"],
                           stdout=subprocess.PIPE,
