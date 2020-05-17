@@ -158,6 +158,8 @@ def load_strava_activity():
                           f"'masterdata --refresh'")
                 else:
                     equipment_name = equipment['name']
+                    if equipment['training_type'] is not None:
+                        type = masterdata.find_type_by_name(equipment['training_type'])
             else:
                 print("[WARN] STRAVA activity hasn't got an equipment")
 
