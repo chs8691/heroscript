@@ -53,6 +53,22 @@ def init_config():
         log(f"Create default {config.key_port}", config.default_port)
         config.save_item(config.key_port, config.default_port)
 
+    if config.key_archive_dir not in myconfig:
+        log(f"Create default {config.key_archive_dir}", config.default_archive_dir)
+        config.save_item(config.key_archive_dir, config.default_archive_dir)
+
+    if config.key_velohero_sso_id not in myconfig:
+        log(f"Create empty {config.key_velohero_sso_id}", "")
+        config.save_item(config.key_velohero_sso_id, "")
+
+    if config.key_garmin_username not in myconfig:
+        log(f"Create empty {config.key_garmin_username}", "")
+        config.save_item(config.key_garmin_username, "")
+
+    if config.key_garmin_password not in myconfig:
+        log(f"Create empty {config.key_garmin_password}", "")
+        config.save_item(config.key_garmin_password, "")
+
     if config.key_load_dir not in myconfig:
         log(f"Create default {config.key_load_dir}", config.default_load_dir)
         config.save_item(config.key_load_dir, config.default_load_dir)

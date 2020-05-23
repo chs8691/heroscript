@@ -34,10 +34,10 @@ def index():
         #take code and convert to token
         strava.obtain_new_token(strava_code)
 
-    # if this is the user's first visit, load page for authentication
-    if strava.need_strava_authorization():
-        print("App needs to be authorized by Strava")
-        return redirect(url_for('authenticate_strava'))
+    # # if this is the user's first visit, load page for authentication
+    # if strava.need_strava_authorization():
+    #     print("App needs to be authorized by Strava")
+    #     return redirect(url_for('authenticate_strava'))
 
 
     if 'messages' in session:
@@ -88,6 +88,11 @@ def load():
     # # Ensure that app is authorized at Strava
     # if strava.need_strava_authorization():
     #     url = strava.get_strava_authorization_url(url_for("/authorize"))
+
+    # if this is the user's first visit, load page for authentication
+    if strava.need_strava_authorization():
+        print("App needs to be authorized by Strava")
+        return redirect(url_for('authenticate_strava'))
 
 
     res_load = subprocess.run([sys.executable, 'main.py', 'load', '--strava'], stdout=subprocess.PIPE, text=True)
@@ -513,6 +518,13 @@ def masterdata_show():
 
 @app.route('/masterdata/update')
 def masterdata_update():
+
+    # if this is the user's first visit, load page for authentication
+    if strava.need_strava_authorization():
+        print("App needs to be authorized by Strava")
+        return redirect(url_for('authenticate_strava'))
+
+
     res_refresh = subprocess.run([sys.executable, 'main.py', 'masterdata', '--refresh'], stdout=subprocess.PIPE,
                                  text=True)
     res_list = subprocess.run([sys.executable, 'main.py', 'masterdata', '--list'], stdout=subprocess.PIPE, text=True)
