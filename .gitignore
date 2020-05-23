@@ -4,7 +4,8 @@ veloheroup.sh
 .directory
 venv3.8
 venv
-download/
+download/in/*
+download/*.*
 demo/
 gcexport.log
 
