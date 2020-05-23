@@ -11,4 +11,4 @@ download/.*
 download/*.*
 demo/
 gcexport.log
-
+archive/*
