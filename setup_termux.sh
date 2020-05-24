@@ -36,7 +36,7 @@ pkg install libxml2 libxslt
 
 echo 
 echo "Install packages in venv"
-pip install -r heroscript/requirements.txt 
+pip install -r requirements.txt 
 deactivate 
 
 echo 
