@@ -1,7 +1,5 @@
 #!/bin/bash
 
-git clone https://github.com/chs8691/heroscript.git
-
 echo 
 echo "Installing Garmin Downloader"
 git clone https://github.com/chs8691/garmin-connect-export.git
