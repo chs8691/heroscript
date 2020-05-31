@@ -5,8 +5,8 @@ echo "Grant external storage access in ~/storage"
 termux-setup-storage
 
 echo 
-echo "Installing Garmin Downloader"
-git clone https://github.com/chs8691/garmin-connect-export.git
+echo "Installing Garmin Downloader in the home directory"
+git clone https://github.com/chs8691/garmin-connect-export.git ../garmin-connect-export
 
 echo 
 echo "Installing Python3"
