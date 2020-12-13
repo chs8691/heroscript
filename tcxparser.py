@@ -92,6 +92,10 @@ class TCXParser:
     def hr_avg(self):
         """Average heart rate of the workout"""
         hr_data = self.hr_values()
+        
+        if len(hr_data) == 0:
+            return 0
+        
         return int(sum(hr_data) / len(hr_data))
 
     @property

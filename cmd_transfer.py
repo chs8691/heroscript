@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from os import path, replace, remove
 from pathlib import Path
 from ftplib import FTP, all_errors
@@ -123,9 +124,9 @@ def _execute_archive(preparation, load):
         os.remove(load.file_name)
 
     else:
-        utility.log("os.replace from {} to".format(load.file_name), preparation['dir'])
-        dest = path.join(preparation['dir'], Path(load.file_name).name)
-        replace(load.file_name, dest)
+        utility.log("os.replace from {} to".format(load.file_name), preparation['dest_dir'])
+        dest = path.join(preparation['dest_dir'], Path(load.file_name).name)
+        shutil.move(load.file_name, dest)
         human_dest=dest
 
     load.set_archived_to(dest)

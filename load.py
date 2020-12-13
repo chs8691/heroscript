@@ -80,7 +80,7 @@ class Stage:
 
         # STRAVA fields will be set with add_strava
         self.strava_activity_id = None
-        self.strava_activity_name = None
+        self.strava_activity_name = ""
         self.strava_descriptions = None
 
     def init_by_tcx(self, tcxparser):

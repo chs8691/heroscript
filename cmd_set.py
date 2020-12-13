@@ -88,9 +88,9 @@ def process_set(args):
         log("equipment_names", equipment_names)
         load.set_equipment_names(equipment_names)
 
-    if args.name is not None:
-        log("args.name", args.name)
-        load.set_title(args.name.strip())
+    if args.title is not None:
+        log("args.title", args.title)
+        load.set_title(args.title.strip())
 
     if args.comment is not None:
         log("args.comment", args.comment)
