@@ -270,4 +270,22 @@ The third way for setting the training type is a title prefix. For instance the 
 
 ![Training Type as Prefix](https://github.com/chs8691/heroscript/blob/master/design/strava-title.png)
  
+# Usage examples
+## bash bulk operation 
+If there is no need to change an activities data with the --set operator, bulk processing can look like this. 
 
+```
+  $ ./gce.sh 60 # Your script for the garmin connector exporter
+  Welcome to Garmin Connect Exporter!
+  ...
+  Querying list of activities 1..60... Done.
+  ...
+  Downloading: Garmin Connect activity (56/60) [8383910826] Gelnhausen Radfahren 2022-02-27T08:18:57+01:00, 01:55:09, 33.098km
+  Excluding  : Garmin Connect activity (57/60) [8304837373]
+  Excluding  : Garmin Connect activity (58/60) [8293498719]
+  Excluding  : Garmin Connect activity (59/60) [8275630134]
+  Excluding  : Garmin Connect activity (60/60) [8263699624]
+  Done!
+  for n in {1..56}; do venv/bin/python main.py load -s && venv/bin/python main.py transfer -v -a; done;
+  ...
+```
